@@ -1,0 +1,7 @@
+Product Code,Product Name,Unit Price,Qty,Amount
+A001,Laptop PC,"120,000",5,"600,000"
+A002,Mouse,"3,500",20,"70,000"
+A003,Keyboard,"8,000",15,"120,000"
+A004,Monitor,"45,000",8,"360,000"
+A005,USB Hub,"2,500",30,"75,000"
+,Total,,,"1,225,000"
