@@ -81,7 +81,7 @@
     #gameScreen {
       position: fixed;
       inset: 0;
-      background: url('IMG_3753.png') center/cover no-repeat;
+      background: url('IMG_3753.png') center center / cover no-repeat, #000;
       overflow: hidden;
       touch-action: none;
     }
@@ -437,9 +437,9 @@
     if (gameOver || totalSpawned >= TOTAL_ITEMS) return;
     totalSpawned++;
 
-    const hudH        = $game.querySelector('.game-hud').offsetHeight || 56;
-    const margin      = 20;
-    const bottomMargin = 100;
+    const hudH         = $game.querySelector('.game-hud').offsetHeight || 56;
+    const margin       = 20;
+    const bottomMargin = 120;
     const W = window.innerWidth, H = window.innerHeight;
 
     const el = document.createElement('div');
