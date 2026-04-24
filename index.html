@@ -485,56 +485,38 @@
     el.style.left = x + 'px';
     el.style.top  = y + 'px';
 
-    let taps = 0;
-    el.addEventListener('click', () => {
-      if (gameOver) return;
-      if (el.classList.contains('bursting') || el.classList.contains('pre-burst')) return;
-
-      taps++;
-      if (taps >= TAPS_MAX) {
-        el.classList.remove('stage-1','stage-2');
-        el.classList.add('pre-burst');
-        navigator.vibrate?.(60);
-
-        setTimeout(() => {
-          const { cx, cy } = createBurst(el);
-          playBurst();
-          shakeScreen();
-          el.classList.remove('pre-burst');
-          el.classList.add('bursting');
-
-          score++;
-          showFloatScore(cx, cy, score);
-          document.getElementById('hudScore').textContent  = `💥 ${score}体撃破`;
-          document.getElementById('hudRemain').textContent = `残り ${TOTAL_ITEMS - score}体`;
-
-
-          if (score >= TOTAL_ITEMS) {
-            gameWon  = true;
-            gameOver = true;
-            stopSpawn();
-            stopTimer();
-            setTimeout(() => { el.remove(); endGame(); }, 430);
-            return;
-          }
-
-          setTimeout(() => el.remove(), 430);
-        }, 160);
-
-      } else {
-        playHit(taps);
-        navigator.vibrate?.(20);
-        el.classList.remove('stage-1','stage-2','popping');
-        el.classList.add(`stage-${taps}`);
-        void el.offsetWidth;
-        el.classList.add('popping');
-        el.addEventListener('animationend', () => el.classList.remove('popping'), { once: true });
-      }
-    });
+    el.addEventListener('pointerdown', () => triggerBurst(el));
+    el.addEventListener('pointerenter', (e) => { if (e.buttons > 0) triggerBurst(el); });
 
     el.classList.add('spawning');
     el.addEventListener('animationend', () => el.classList.remove('spawning'), { once: true });
     $game.appendChild(el);
+  }
+
+  function triggerBurst(el) {
+    if (gameOver) return;
+    if (el.classList.contains('bursting') || el.classList.contains('pre-burst')) return;
+    el.classList.add('pre-burst');
+    navigator.vibrate?.(50);
+    setTimeout(() => {
+      if (!el.isConnected) return;
+      const { cx, cy } = createBurst(el);
+      playBurst();
+      shakeScreen();
+      el.classList.remove('pre-burst');
+      el.classList.add('bursting');
+      score++;
+      showFloatScore(cx, cy, score);
+      document.getElementById('hudScore').textContent  = `💥 ${score}体撃破`;
+      document.getElementById('hudRemain').textContent = `残り ${TOTAL_ITEMS - score}体`;
+      if (score >= TOTAL_ITEMS) {
+        gameWon = true; gameOver = true;
+        stopSpawn(); stopTimer();
+        setTimeout(() => { el.remove(); endGame(); }, 430);
+        return;
+      }
+      setTimeout(() => el.remove(), 430);
+    }, 80);
   }
 
   function getSpawnInterval() {
