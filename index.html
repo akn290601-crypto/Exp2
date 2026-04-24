@@ -443,27 +443,29 @@
     const W = window.innerWidth, H = window.innerHeight;
 
     const el = document.createElement('div');
-    el.className    = 'tap-item';
-    el.style.width  = SIZE + 'px';
-    el.style.height = SIZE + 'px';
+    el.className = 'tap-item';
 
     const overlay = document.createElement('div');
     overlay.className = 'tap-overlay';
     el.appendChild(overlay);
 
+    let itemSize = SIZE;
     if (heroImgSrcs.length > 0) {
+      const src = heroImgSrcs[Math.floor(Math.random() * heroImgSrcs.length)];
+      if (src !== 'IMG_3716.png') itemSize = Math.round(SIZE * 0.72); // 一回り小さく
       const img = document.createElement('img');
-      img.src = heroImgSrcs[Math.floor(Math.random() * heroImgSrcs.length)];
-      img.draggable = false;
+      img.src = src; img.draggable = false;
       el.appendChild(img);
     } else {
-      el.style.fontSize   = SIZE * 0.7 + 'px';
+      el.style.fontSize   = itemSize * 0.7 + 'px';
       el.style.lineHeight = '1';
       el.insertAdjacentText('beforeend', EMOJIS[itemIndex++ % EMOJIS.length]);
     }
+    el.style.width  = itemSize + 'px';
+    el.style.height = itemSize + 'px';
 
-    const x = margin + Math.random() * Math.max(0, W - margin * 2 - SIZE);
-    const y = hudH + margin + Math.random() * Math.max(0, H - hudH - margin - bottomMargin - SIZE);
+    const x = margin + Math.random() * Math.max(0, W - margin * 2 - itemSize);
+    const y = hudH + margin + Math.random() * Math.max(0, H - hudH - margin - bottomMargin - itemSize);
     el.style.left = x + 'px';
     el.style.top  = y + 'px';
 
