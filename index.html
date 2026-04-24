@@ -350,14 +350,26 @@
 
   /* ── Web Audio API ── */
   let audioCtx = null;
-  function getCtx() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    return audioCtx;
+
+  function initAudio() {
+    if (audioCtx) { audioCtx.resume(); return; }
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      // iOS unlock: 無音バッファを再生してAudioContextを起こす
+      const buf = audioCtx.createBuffer(1, 1, 22050);
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      src.connect(audioCtx.destination);
+      src.start(0);
+      audioCtx.resume();
+    } catch (_) {}
   }
+
+  function getCtx() { return audioCtx; }
 
   function playHit(stage) {
     try {
-      const ctx  = getCtx();
+      const ctx  = getCtx(); if (!ctx) return;
       const osc  = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
@@ -374,7 +386,7 @@
 
   function playBurst() {
     try {
-      const ctx    = getCtx();
+      const ctx    = getCtx(); if (!ctx) return;
       // ノイズバースト
       const buf    = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate);
       const data   = buf.getChannelData(0);
@@ -404,7 +416,7 @@
 
   function playClear() {
     try {
-      const ctx   = getCtx();
+      const ctx   = getCtx(); if (!ctx) return;
       const notes = [523, 659, 784, 1047]; // C5 E5 G5 C6
       notes.forEach((freq, i) => {
         const osc  = ctx.createOscillator();
@@ -515,11 +527,29 @@
     const v = document.getElementById('nameInput').value.trim();
     if (!v) { document.getElementById('nameInput').focus(); return; }
     playerName = v;
-    // AudioContext はユーザー操作で初期化（iOS対応）
-    getCtx();
+
+    // ユーザー操作のタイミングでAudioContextを初期化・unlock
+    initAudio();
+
+    const btn = document.getElementById('startBtn');
+    btn.disabled = true;
+    btn.textContent = '▶ 再生中...';
+
+    let started = false;
+    const doStart = () => {
+      if (started) return;
+      started = true;
+      btn.disabled = false;
+      btn.textContent = 'ゲームスタート';
+      startGame();
+    };
+
     const audio = new Audio('start.mp3');
-    audio.play().catch(() => {});
-    startGame();
+    audio.addEventListener('ended', doStart);
+    // 音声が再生できない場合・長すぎる場合は最大8秒で強制スタート
+    const fallback = setTimeout(doStart, 8000);
+    audio.addEventListener('ended', () => clearTimeout(fallback));
+    audio.play().catch(() => doStart());
   });
   document.getElementById('nameInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('startBtn').click();
