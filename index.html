@@ -278,13 +278,13 @@
   const TAPS_MAX          = 1;
   const SIZE              = 90;
   const MEDALS            = ['🥇','🥈','🥉'];
-  const HERO_SRC          = 'IMG_3716.png';
+  const HERO_SRCS         = ['IMG_3716.png','IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png'];
   const GAME_DURATION     = 30;
   const TOTAL_ITEMS       = 99;
   const SPAWN_INTERVAL_MS = 300;
   const INITIAL_SPAWN     = 5;
 
-  let heroImgSrc   = null;
+  let heroImgSrcs  = [];
   let score        = 0;
   let gameEndTime  = null;
   let rafId        = null;
@@ -451,9 +451,10 @@
     overlay.className = 'tap-overlay';
     el.appendChild(overlay);
 
-    if (heroImgSrc) {
+    if (heroImgSrcs.length > 0) {
       const img = document.createElement('img');
-      img.src = heroImgSrc; img.draggable = false;
+      img.src = heroImgSrcs[Math.floor(Math.random() * heroImgSrcs.length)];
+      img.draggable = false;
       el.appendChild(img);
     } else {
       el.style.fontSize   = SIZE * 0.7 + 'px';
@@ -639,12 +640,14 @@
   /* ── 起動時 ── */
   (async () => {
     renderLb('topLb');
-    heroImgSrc = await (new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => resolve(img.src);
-      img.onerror = () => resolve(null);
-      img.src = HERO_SRC;
-    }));
+    heroImgSrcs = (await Promise.all(
+      HERO_SRCS.map(src => new Promise(resolve => {
+        const img = new Image();
+        img.onload  = () => resolve(src);
+        img.onerror = () => resolve(null);
+        img.src = src;
+      }))
+    )).filter(Boolean);
   })();
 </script>
 </body>
