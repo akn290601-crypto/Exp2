@@ -241,6 +241,12 @@
       z-index: 20;
       animation: float-up 0.7s ease-out forwards;
     }
+    .float-score.milestone {
+      font-size: 3.6rem;
+      color: #ff4400;
+      text-shadow: 0 0 20px #ff8800, 0 0 40px #ff4400, 0 3px 8px rgba(0,0,0,0.8);
+      animation: float-up 1s ease-out forwards;
+    }
 
     /* 結果 */
     .result-score { font-size: 4rem; font-weight: 900; color: #ffd200; margin: 8px 0 2px; }
@@ -391,13 +397,15 @@
   }
 
   function showFloatScore(cx, cy, count) {
+    const isMilestone = count % 10 === 0;
     const el = document.createElement('div');
-    el.className = 'float-score';
+    el.className = 'float-score' + (isMilestone ? ' milestone' : '');
     el.textContent = count;
-    el.style.left = (cx - 24) + 'px';
-    el.style.top  = (cy - 20) + 'px';
+    const offset = isMilestone ? 40 : 24;
+    el.style.left = (cx - offset) + 'px';
+    el.style.top  = (cy - 30) + 'px';
     $game.appendChild(el);
-    setTimeout(() => el.remove(), 750);
+    setTimeout(() => el.remove(), isMilestone ? 1050 : 750);
   }
 
   function createBurst(el) {
