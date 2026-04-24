@@ -187,15 +187,22 @@
     }
     .tap-item.popping { animation: pop 0.16s ease; }
 
-    /* 破裂アニメーション */
+    /* 3回目：一瞬縮む */
+    .tap-item.pre-burst {
+      transform: scale(0.55) !important;
+      transition: transform 0.14s ease-in !important;
+      pointer-events: none;
+    }
+
+    /* 破裂アニメーション（縮んだ状態から膨張して消える） */
     @keyframes burst {
-      0%   { transform: scale(1) rotate(0deg);    opacity: 1; }
-      30%  { transform: scale(1.6) rotate(8deg);  opacity: 0.9; }
-      70%  { transform: scale(2.2) rotate(-6deg); opacity: 0.4; }
-      100% { transform: scale(0.4) rotate(12deg); opacity: 0; }
+      0%   { transform: scale(0.55) rotate(0deg);  opacity: 1; }
+      30%  { transform: scale(1.7) rotate(8deg);   opacity: 0.9; }
+      65%  { transform: scale(2.2) rotate(-6deg);  opacity: 0.4; }
+      100% { transform: scale(0.3) rotate(12deg);  opacity: 0; }
     }
     .tap-item.bursting {
-      animation: burst 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+      animation: burst 0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
       pointer-events: none;
       z-index: 5;
     }
@@ -440,10 +447,15 @@
         taps++;
 
         if (taps >= TAPS_MAX) {
-          /* 破裂！ */
-          createBurst(el);
-          el.classList.add('bursting');
-          setTimeout(() => el.remove(), 460);
+          /* 縮んでから破裂 */
+          el.classList.remove('stage-1', 'stage-2');
+          el.classList.add('pre-burst');
+          setTimeout(() => {
+            createBurst(el);
+            el.classList.remove('pre-burst');
+            el.classList.add('bursting');
+            setTimeout(() => el.remove(), 430);
+          }, 160);
 
           remaining--;
           document.getElementById('hudRemain').textContent = `残り ${remaining}個`;
