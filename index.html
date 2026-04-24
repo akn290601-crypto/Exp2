@@ -48,44 +48,33 @@
       font-size: 1rem;
       text-align: center;
       outline: none;
-      margin-bottom: 14px;
+      margin-bottom: 16px;
       transition: border-color 0.2s;
     }
     input[type="text"]::placeholder { color: #555; }
     input[type="text"]:focus { border-color: #f7971e; }
 
-    /* Image picker */
-    .img-picker-wrap {
+    /* hero image preview on name screen */
+    .hero-preview-wrap {
       width: 100%;
       max-width: 280px;
       margin-bottom: 16px;
-    }
-    .img-picker-label {
+      padding: 12px 16px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.06);
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 10px;
-      width: 100%;
-      padding: 12px 18px;
-      border: 2px dashed rgba(255,255,255,0.25);
-      border-radius: 14px;
-      background: rgba(255,255,255,0.05);
-      cursor: pointer;
-      transition: border-color 0.2s, background 0.2s;
-      font-size: 0.9rem;
-      color: #bbb;
+      gap: 12px;
     }
-    .img-picker-label:active { background: rgba(255,255,255,0.1); }
-    .img-picker-label.selected { border-color: #f7971e; color: #f7971e; }
-    .img-preview {
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
+    .hero-preview-wrap img {
+      width: 52px;
+      height: 52px;
+      border-radius: 10px;
       object-fit: cover;
-      display: none;
+      flex-shrink: 0;
     }
-    .img-preview.visible { display: block; }
-    input[type="file"] { display: none; }
+    .hero-preview-text { font-size: 0.85rem; color: #ccc; line-height: 1.5; }
+    .hero-preview-text strong { color: #f7971e; display: block; }
 
     .btn {
       padding: 14px 36px;
@@ -158,7 +147,7 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      border-radius: 12px;
+      border-radius: 10px;
       pointer-events: none;
       display: block;
     }
@@ -188,18 +177,18 @@
 <div class="screen" id="nameScreen">
   <div class="logo">⚡</div>
   <h1>タップゲーム</h1>
-  <p class="sub">絵文字または画像を3回タップして消そう！<br>速さを競え！</p>
+  <p class="sub">画像を3回タップして消そう！<br>速さを競え！</p>
 
   <input type="text" id="nameInput" placeholder="プレイヤー名を入力"
     maxlength="12" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 
-  <!-- Image picker -->
-  <div class="img-picker-wrap">
-    <label class="img-picker-label" id="pickerLabel" for="imgFile">
-      <img class="img-preview" id="imgPreview" src="" alt="">
-      <span id="pickerText">📷 タップ対象の画像を選択（任意）</span>
-    </label>
-    <input type="file" id="imgFile" accept="image/*">
+  <!-- hero.jpg が存在するときだけ表示 -->
+  <div class="hero-preview-wrap hidden" id="heroPreviewWrap">
+    <img id="heroThumb" src="" alt="hero">
+    <div class="hero-preview-text">
+      <strong>画像読み込み済み</strong>
+      この画像がタップ対象になります
+    </div>
   </div>
 
   <button class="btn btn-primary" id="startBtn">ゲームスタート</button>
@@ -233,15 +222,16 @@
   const EMOJIS   = ['🍎','🍊','🍋','🍇','🍓','🍉','🍑','🌟','🎯','🦋','🌸','🎪','🍄','🎨','🌈'];
   const TOTAL    = 15;
   const TAPS_MAX = 3;
-  const SIZES    = [72, 50, 30];   // px at tap 0, 1, 2 → vanishes on 3rd
+  const SIZES    = [72, 50, 30];
   const MEDALS   = ['🥇','🥈','🥉'];
+  const HERO_SRC = 'hero.jpg';   // リポジトリに置く画像ファイル名
 
-  let playerName  = '';
-  let customImgSrc = null;   // data URL of user-selected image
-  let startTime   = null;
-  let rafId       = null;
-  let remaining   = 0;
-  let active      = false;
+  let playerName   = '';
+  let heroImgSrc   = null;   // hero.jpg が読み込めたらここに格納
+  let startTime    = null;
+  let rafId        = null;
+  let remaining    = 0;
+  let active       = false;
 
   const $name   = document.getElementById('nameScreen');
   const $game   = document.getElementById('gameScreen');
@@ -252,21 +242,15 @@
     el.classList.remove('hidden');
   }
 
-  /* ── Image picker ── */
-  document.getElementById('imgFile').addEventListener('change', function () {
-    const file = this.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      customImgSrc = e.target.result;
-      const preview = document.getElementById('imgPreview');
-      preview.src = customImgSrc;
-      preview.classList.add('visible');
-      document.getElementById('pickerLabel').classList.add('selected');
-      document.getElementById('pickerText').textContent = '✅ 画像選択済み';
-    };
-    reader.readAsDataURL(file);
-  });
+  /* ── hero.jpg を自動ロード ── */
+  function tryLoadHero() {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve(img.src);
+      img.onerror = () => resolve(null);
+      img.src = HERO_SRC;
+    });
+  }
 
   /* ── localStorage scores ── */
   function loadScores() {
@@ -299,7 +283,7 @@
   }
   function esc(s) {
     return s.replace(/[&<>"']/g,
-      c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+      c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
   /* ── Name screen ── */
@@ -348,13 +332,13 @@
       el.className = 'tap-item';
       setSize(el, sz0);
 
-      if (customImgSrc) {
+      if (heroImgSrc) {
         const img = document.createElement('img');
-        img.src = customImgSrc;
+        img.src       = heroImgSrc;
         img.draggable = false;
         el.appendChild(img);
       } else {
-        el.textContent  = EMOJIS[i % EMOJIS.length];
+        el.textContent    = EMOJIS[i % EMOJIS.length];
         el.style.fontSize = sz0 + 'px';
         el.style.lineHeight = '1';
       }
@@ -390,7 +374,7 @@
         } else {
           const sz = SIZES[taps];
           setSize(el, sz);
-          if (!customImgSrc) el.style.fontSize = sz + 'px';
+          if (!heroImgSrc) el.style.fontSize = sz + 'px';
           el.classList.remove('popping');
           void el.offsetWidth;
           el.classList.add('popping');
@@ -426,8 +410,17 @@
     showScreen($name);
   });
 
-  /* ── init ── */
-  renderLb('topLb');
+  /* ── 起動時：hero.jpg を試みる ── */
+  (async () => {
+    renderLb('topLb');
+    heroImgSrc = await tryLoadHero();
+    if (heroImgSrc) {
+      const wrap  = document.getElementById('heroPreviewWrap');
+      const thumb = document.getElementById('heroThumb');
+      thumb.src = heroImgSrc;
+      wrap.classList.remove('hidden');
+    }
+  })();
 </script>
 </body>
 </html>
