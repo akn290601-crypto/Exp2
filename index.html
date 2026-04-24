@@ -301,7 +301,7 @@
   const HERO_SRCS         = ['IMG_3716.png','IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png'];
   const GAME_DURATION     = 30;
   const TOTAL_ITEMS       = 150;
-  const SPAWN_INTERVAL_MS = 300;
+  const SPAWN_INTERVAL_MS = 240;
   const INITIAL_SPAWN     = 5;
 
   let heroImgSrcs  = [];
@@ -528,9 +528,9 @@
   }
 
   function getSpawnInterval() {
-    if (score >= 80) return 150;
-    if (score >= 60) return 200;
-    if (score >= 30) return 250;
+    if (score >= 80) return 120;
+    if (score >= 60) return 160;
+    if (score >= 30) return 200;
     return SPAWN_INTERVAL_MS;
   }
 
