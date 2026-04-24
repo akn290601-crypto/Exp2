@@ -452,7 +452,8 @@
     let itemSize = SIZE;
     if (heroImgSrcs.length > 0) {
       const src = heroImgSrcs[Math.floor(Math.random() * heroImgSrcs.length)];
-      if (src !== 'IMG_3716.png') itemSize = Math.round(SIZE * 0.72); // 一回り小さく
+      if (src === 'IMG_3716.png') itemSize = Math.round(SIZE * 1.28); // 一回り大きく
+      else itemSize = Math.round(SIZE * 0.72);                        // 一回り小さく
       const img = document.createElement('img');
       img.src = src; img.draggable = false;
       el.appendChild(img);
