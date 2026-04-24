@@ -262,6 +262,19 @@
       animation: particle-fly 0.55s ease-out forwards;
     }
 
+    @keyframes shatter {
+      0%   { transform: translate(0,0) rotate(0deg) scale(1); opacity: 1; }
+      100% { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) scale(0.2); opacity: 0; }
+    }
+    .shard {
+      position: absolute;
+      pointer-events: none;
+      z-index: 16;
+      overflow: hidden;
+      border-radius: 3px;
+      animation: shatter 0.52s ease-out forwards;
+    }
+
     @keyframes float-up {
       0%   { transform: translateY(0)     scale(1);   opacity: 1; }
       60%  { transform: translateY(-40px) scale(1.1); opacity: 1; }
@@ -495,6 +508,41 @@
     return { cx, cy };
   }
 
+  function createShatter(el) {
+    const imgEl = el.querySelector('img');
+    if (!imgEl) return;
+    const rect  = el.getBoundingClientRect();
+    const gr    = $game.getBoundingClientRect();
+    const ex    = rect.left - gr.left;
+    const ey    = rect.top  - gr.top;
+    const iSize = parseInt(el.style.width) || SIZE;
+    const cols  = 4, rows = 4;
+    const fw    = iSize / cols;
+    const fh    = iSize / rows;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const shard = document.createElement('div');
+        shard.className = 'shard';
+        shard.style.width             = fw + 'px';
+        shard.style.height            = fh + 'px';
+        shard.style.left              = (ex + c * fw) + 'px';
+        shard.style.top               = (ey + r * fh) + 'px';
+        shard.style.backgroundImage   = `url(${imgEl.src})`;
+        shard.style.backgroundSize    = `${iSize}px ${iSize}px`;
+        shard.style.backgroundPosition= `-${(c * fw).toFixed(1)}px -${(r * fh).toFixed(1)}px`;
+        const dx  = (c + 0.5) * fw - iSize / 2;
+        const dy  = (r + 0.5) * fh - iSize / 2;
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        const spd = 55 + Math.random() * 85;
+        shard.style.setProperty('--tx',  (dx / len * spd).toFixed(1) + 'px');
+        shard.style.setProperty('--ty',  (dy / len * spd).toFixed(1) + 'px');
+        shard.style.setProperty('--rot', (Math.random() * 400 - 200).toFixed(1) + 'deg');
+        $game.appendChild(shard);
+        setTimeout(() => shard.remove(), 580);
+      }
+    }
+  }
+
 /* ── タイマー ── */
   function tickTimer() {
     if (gameEndTime && !gameOver) {
@@ -573,6 +621,7 @@
     navigator.vibrate?.(50);
     setTimeout(() => {
       if (!el.isConnected) return;
+      createShatter(el);
       const { cx, cy } = createBurst(el);
       const isMilestone = (score + 1) % 10 === 0;
       playBurst(isMilestone);
