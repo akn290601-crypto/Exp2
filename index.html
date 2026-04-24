@@ -32,12 +32,9 @@
     }
     .screen.hidden { display: none; }
 
-    /* ── Name screen ── */
     .logo { font-size: 3rem; margin-bottom: 8px; }
     h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; }
     .sub { color: #aaa; font-size: 0.9rem; margin-bottom: 28px; text-align: center; line-height: 1.6; }
-
-
 
     .btn {
       padding: 14px 36px;
@@ -68,7 +65,7 @@
     }
     .lb-medal { font-size: 1.2rem; width: 26px; text-align: center; flex-shrink: 0; }
     .lb-name  { flex: 1; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .lb-time  { color: #ffd200; font-weight: 700; font-size: 0.95rem; flex-shrink: 0; }
+    .lb-score { color: #ffd200; font-weight: 700; font-size: 0.95rem; flex-shrink: 0; }
 
     /* ── Game screen ── */
     #gameScreen {
@@ -79,17 +76,15 @@
       touch-action: none;
     }
 
-    /* 画面シェイク */
     @keyframes shake {
-      0%,100% { transform: translate(0, 0) rotate(0deg); }
-      20%     { transform: translate(-6px,  3px) rotate(-0.5deg); }
-      40%     { transform: translate( 6px, -3px) rotate( 0.5deg); }
-      60%     { transform: translate(-4px,  2px) rotate(-0.3deg); }
-      80%     { transform: translate( 4px, -2px) rotate( 0.3deg); }
+      0%,100% { transform: translate(0,0) rotate(0deg); }
+      20%     { transform: translate(-6px, 3px) rotate(-0.5deg); }
+      40%     { transform: translate( 6px,-3px) rotate( 0.5deg); }
+      60%     { transform: translate(-4px, 2px) rotate(-0.3deg); }
+      80%     { transform: translate( 4px,-2px) rotate( 0.3deg); }
     }
     #gameScreen.shaking { animation: shake 0.3s ease; }
 
-    /* クリアフラッシュ */
     #clearFlash {
       position: absolute;
       inset: 0;
@@ -118,20 +113,20 @@
       -webkit-backdrop-filter: blur(8px);
       z-index: 10;
     }
-    .hud-timer  {
+    /* カウントダウン */
+    .hud-timer {
       font-size: 1.6rem;
       font-weight: 800;
       color: #ffd200;
       font-variant-numeric: tabular-nums;
-      transition: color 0.5s;
+      transition: color 0.4s;
     }
     .hud-timer.orange { color: #ff8c00; }
-    .hud-timer.red    { color: #ff2200; animation: timer-blink 0.4s ease-in-out infinite alternate; }
-    @keyframes timer-blink {
-      from { opacity: 1; }
-      to   { opacity: 0.5; }
-    }
-    .hud-remain { font-size: 0.9rem; color: #aaa; }
+    .hud-timer.red    { color: #ff2200; animation: timer-blink 0.35s ease-in-out infinite alternate; }
+    @keyframes timer-blink { from { opacity:1; } to { opacity:0.4; } }
+
+    /* スコア表示 */
+    .hud-score { font-size: 1rem; font-weight: 700; color: #fff; }
 
     /* ── Tap items ── */
     .tap-item {
@@ -152,8 +147,6 @@
       pointer-events: none;
       display: block;
     }
-
-    /* 色変化オーバーレイ */
     .tap-overlay {
       position: absolute;
       inset: 0;
@@ -164,21 +157,17 @@
       z-index: 1;
     }
     .tap-item.stage-1 .tap-overlay {
-      background: rgba(255, 210, 0, 0.5);
+      background: rgba(255,210,0,0.5);
       opacity: 1;
-      box-shadow: 0 0 20px 6px rgba(255, 210, 0, 0.7);
+      box-shadow: 0 0 20px 6px rgba(255,210,0,0.7);
     }
     .tap-item.stage-2 .tap-overlay {
-      background: rgba(255, 40, 0, 0.55);
+      background: rgba(255,40,0,0.55);
       opacity: 1;
-      box-shadow: 0 0 28px 8px rgba(255, 40, 0, 0.8);
+      box-shadow: 0 0 28px 8px rgba(255,40,0,0.8);
       animation: danger-pulse 0.22s ease-in-out infinite alternate;
     }
-
-    @keyframes danger-pulse {
-      from { opacity: 0.85; }
-      to   { opacity: 1; }
-    }
+    @keyframes danger-pulse { from { opacity:.85; } to { opacity:1; } }
 
     @keyframes pop {
       0%   { transform: scale(1); }
@@ -192,7 +181,6 @@
       transition: transform 0.14s ease-in !important;
       pointer-events: none;
     }
-
     @keyframes burst {
       0%   { transform: scale(0.55) rotate(0deg);  opacity: 1; }
       30%  { transform: scale(1.7)  rotate(8deg);  opacity: 0.9; }
@@ -200,15 +188,14 @@
       100% { transform: scale(0.3)  rotate(12deg); opacity: 0; }
     }
     .tap-item.bursting {
-      animation: burst 0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+      animation: burst 0.42s cubic-bezier(0.25,0.46,0.45,0.94) forwards;
       pointer-events: none;
       z-index: 5;
     }
 
-    /* パーティクル */
     @keyframes particle-fly {
-      0%   { transform: translate(0, 0) scale(1); opacity: 1; }
-      100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+      0%   { transform: translate(0,0) scale(1); opacity: 1; }
+      100% { transform: translate(var(--dx),var(--dy)) scale(0); opacity: 0; }
     }
     .particle {
       position: absolute;
@@ -218,9 +205,8 @@
       animation: particle-fly 0.55s ease-out forwards;
     }
 
-    /* フロートスコア（+1） */
     @keyframes float-up {
-      0%   { transform: translateY(0)    scale(1);    opacity: 1; }
+      0%   { transform: translateY(0)     scale(1);   opacity: 1; }
       60%  { transform: translateY(-40px) scale(1.1); opacity: 1; }
       100% { transform: translateY(-70px) scale(0.8); opacity: 0; }
     }
@@ -235,20 +221,20 @@
       animation: float-up 0.7s ease-out forwards;
     }
 
-    /* 結果画面 */
-    .result-time { font-size: 3.5rem; font-weight: 900; color: #ffd200; margin: 12px 0 4px; }
-    .result-rank { font-size: 1rem; color: #aaa; margin-bottom: 20px; }
+    /* 結果 */
+    .result-score { font-size: 4rem; font-weight: 900; color: #ffd200; margin: 8px 0 2px; }
+    .result-label { font-size: 1.1rem; color: #aaa; margin-bottom: 4px; }
+    .result-rank  { font-size: 1rem;   color: #aaa; margin-bottom: 20px; }
     .btn-row { display: flex; gap: 12px; margin-top: 20px; }
   </style>
 </head>
 <body>
 
-<!-- ① 名前入力 -->
+<!-- ① スタート -->
 <div class="screen" id="nameScreen">
   <div class="logo">⚡</div>
   <h1>タップゲーム</h1>
-  <p class="sub">画像を3回タップして破裂させろ！<br>速さを競え！</p>
-
+  <p class="sub">30秒間で何個破壊できるか！<br>3回タップで破裂！</p>
   <button class="btn btn-primary" id="startBtn">ゲームスタート</button>
   <div class="lb-wrap" id="topLb"></div>
 </div>
@@ -257,17 +243,18 @@
 <div class="screen hidden" id="gameScreen">
   <div id="clearFlash"></div>
   <div class="game-hud">
-    <div class="hud-timer"  id="hudTimer">0.00</div>
-    <div class="hud-remain" id="hudRemain">残り 8個</div>
+    <div class="hud-timer" id="hudTimer">30.00</div>
+    <div class="hud-score" id="hudScore">💥 0個</div>
   </div>
 </div>
 
 <!-- ③ リザルト -->
 <div class="screen hidden" id="resultScreen">
   <div class="logo">🎉</div>
-  <h1>クリア！</h1>
-  <div class="result-time" id="resTime"></div>
-  <div class="result-rank" id="resRank"></div>
+  <h1>タイムアップ！</h1>
+  <div class="result-score" id="resScore"></div>
+  <div class="result-label">個破壊</div>
+  <div class="result-rank"  id="resRank"></div>
   <div class="lb-wrap" id="resLb"></div>
   <div class="btn-row">
     <button class="btn btn-secondary" id="backBtn">トップへ</button>
@@ -278,19 +265,20 @@
 <script>
   'use strict';
 
-  const EMOJIS   = ['🍎','🍊','🍋','🍇','🍓','🍉','🍑','🌟','🎯','🦋','🌸','🎪','🍄','🎨','🌈'];
-  const TOTAL    = 8;
-  const TAPS_MAX = 3;
-  const SIZE     = 120;
-  const MEDALS   = ['🥇','🥈','🥉'];
-  const HERO_SRC = 'IMG_3716.png';
+  const EMOJIS          = ['🍎','🍊','🍋','🍇','🍓','🍉','🍑','🌟','🎯','🦋','🌸','🎪','🍄','🎨','🌈'];
+  const TAPS_MAX        = 3;
+  const SIZE            = 120;
+  const MEDALS          = ['🥇','🥈','🥉'];
+  const HERO_SRC        = 'IMG_3716.png';
+  const GAME_DURATION   = 30;    // 秒
+  const ITEMS_ON_SCREEN = 5;     // 常時表示数
 
-  const playerName = 'プレイヤー';
-  let heroImgSrc = null;
-  let startTime  = null;
-  let rafId      = null;
-  let remaining  = 0;
-  let active     = false;
+  let heroImgSrc  = null;
+  let score       = 0;
+  let gameEndTime = null;
+  let rafId       = null;
+  let gameOver    = false;
+  let itemIndex   = 0;
 
   const $name   = document.getElementById('nameScreen');
   const $game   = document.getElementById('gameScreen');
@@ -301,93 +289,71 @@
     el.classList.remove('hidden');
   }
 
-  /* ── Web Audio API ── */
+  /* ── Audio ── */
   let audioCtx = null;
-
   function initAudio() {
     if (audioCtx) { audioCtx.resume(); return; }
     try {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      // iOS unlock: 無音バッファを再生してAudioContextを起こす
       const buf = audioCtx.createBuffer(1, 1, 22050);
       const src = audioCtx.createBufferSource();
-      src.buffer = buf;
-      src.connect(audioCtx.destination);
-      src.start(0);
+      src.buffer = buf; src.connect(audioCtx.destination); src.start(0);
       audioCtx.resume();
     } catch (_) {}
   }
-
   function getCtx() { return audioCtx; }
 
   function playHit(stage) {
     try {
-      const ctx  = getCtx(); if (!ctx) return;
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+      const ctx = getCtx(); if (!ctx) return;
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
       osc.type = 'square';
       osc.frequency.setValueAtTime(stage === 1 ? 180 : 260, ctx.currentTime);
       osc.frequency.exponentialRampToValueAtTime(stage === 1 ? 120 : 180, ctx.currentTime + 0.08);
       gain.gain.setValueAtTime(0.25, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.1);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.1);
     } catch (_) {}
   }
 
   function playBurst() {
     try {
-      const ctx    = getCtx(); if (!ctx) return;
-      // ノイズバースト
-      const buf    = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate);
-      const data   = buf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
-      const noise  = ctx.createBufferSource();
-      noise.buffer = buf;
-      const nGain  = ctx.createGain();
-      noise.connect(nGain);
-      nGain.connect(ctx.destination);
+      const ctx = getCtx(); if (!ctx) return;
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate);
+      const d   = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const noise = ctx.createBufferSource(), nGain = ctx.createGain();
+      noise.buffer = buf; noise.connect(nGain); nGain.connect(ctx.destination);
       nGain.gain.setValueAtTime(0.4, ctx.currentTime);
       nGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28);
       noise.start(ctx.currentTime);
-      // 低音ドロップ
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination); osc.type = 'sine';
       osc.frequency.setValueAtTime(140, ctx.currentTime);
       osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.25);
       gain.gain.setValueAtTime(0.5, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.3);
     } catch (_) {}
   }
 
   function playClear() {
     try {
-      const ctx   = getCtx(); if (!ctx) return;
-      const notes = [523, 659, 784, 1047]; // C5 E5 G5 C6
-      notes.forEach((freq, i) => {
-        const osc  = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = 'triangle';
+      const ctx = getCtx(); if (!ctx) return;
+      [523, 659, 784, 1047].forEach((freq, i) => {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination); osc.type = 'triangle';
         const t = ctx.currentTime + i * 0.1;
         osc.frequency.setValueAtTime(freq, t);
         gain.gain.setValueAtTime(0.35, t);
         gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
-        osc.start(t);
-        osc.stop(t + 0.25);
+        osc.start(t); osc.stop(t + 0.25);
       });
     } catch (_) {}
   }
 
-  /* ── 画面シェイク ── */
+  /* ── エフェクト ── */
   function shakeScreen() {
     $game.classList.remove('shaking');
     void $game.offsetWidth;
@@ -395,64 +361,176 @@
     $game.addEventListener('animationend', () => $game.classList.remove('shaking'), { once: true });
   }
 
-  /* ── フロートスコア ── */
   function showFloatScore(cx, cy) {
     const el = document.createElement('div');
-    el.className   = 'float-score';
+    el.className = 'float-score';
     el.textContent = '+1';
-    el.style.left  = (cx - 20) + 'px';
-    el.style.top   = (cy - 20) + 'px';
+    el.style.left = (cx - 20) + 'px';
+    el.style.top  = (cy - 20) + 'px';
     $game.appendChild(el);
     setTimeout(() => el.remove(), 750);
   }
 
-  /* ── タイマー色 ── */
-  function updateTimerColor(elapsed) {
-    const el = document.getElementById('hudTimer');
-    if (elapsed >= 20) {
-      el.classList.remove('orange');
-      el.classList.add('red');
-    } else if (elapsed >= 10) {
-      el.classList.remove('red');
-      el.classList.add('orange');
-    } else {
-      el.classList.remove('orange', 'red');
+  function createBurst(el) {
+    const rect = el.getBoundingClientRect();
+    const gr   = $game.getBoundingClientRect();
+    const cx   = rect.left - gr.left + rect.width  / 2;
+    const cy   = rect.top  - gr.top  + rect.height / 2;
+    const colors = ['#ff4400','#ff8800','#ffdd00','#ff2200','#ffaa00','#ffffff','#ff66aa'];
+    for (let i = 0; i < 14; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const angle = (i / 14) * Math.PI * 2;
+      const dist  = 55 + Math.random() * 65;
+      const sz    = 7 + Math.random() * 9;
+      p.style.cssText =
+        `width:${sz}px;height:${sz}px;background:${colors[i%colors.length]};` +
+        `left:${cx-sz/2}px;top:${cy-sz/2}px;` +
+        `--dx:${(Math.cos(angle)*dist).toFixed(1)}px;--dy:${(Math.sin(angle)*dist).toFixed(1)}px;`;
+      $game.appendChild(p);
+      setTimeout(() => p.remove(), 650);
     }
+    return { cx, cy };
   }
 
   /* ── タイマー ── */
   function tickTimer() {
-    if (startTime) {
-      const elapsed = (Date.now() - startTime) / 1000;
-      document.getElementById('hudTimer').textContent = elapsed.toFixed(2);
-      updateTimerColor(elapsed);
+    if (gameEndTime && !gameOver) {
+      const left = Math.max(0, (gameEndTime - Date.now()) / 1000);
+      const timerEl = document.getElementById('hudTimer');
+      timerEl.textContent = left.toFixed(2);
+      // 残り時間で色変化
+      if (left <= 10)      { timerEl.classList.remove('orange'); timerEl.classList.add('red'); }
+      else if (left <= 20) { timerEl.classList.remove('red');    timerEl.classList.add('orange'); }
+      else                 { timerEl.classList.remove('orange','red'); }
+
+      if (left <= 0) {
+        gameOver = true;
+        stopTimer();
+        endGame();
+        return;
+      }
     }
     rafId = requestAnimationFrame(tickTimer);
   }
   function stopTimer() { cancelAnimationFrame(rafId); rafId = null; }
 
-  /* ── 画像自動ロード ── */
-  function tryLoadHero() {
-    return new Promise(resolve => {
-      const img = new Image();
-      img.onload  = () => resolve(img.src);
-      img.onerror = () => resolve(null);
-      img.src = HERO_SRC;
+  /* ── アイテム生成 ── */
+  function spawnItem() {
+    if (gameOver) return;
+    const hudH  = $game.querySelector('.game-hud').offsetHeight || 56;
+    const margin = 20;
+    const W = window.innerWidth, H = window.innerHeight;
+
+    const el = document.createElement('div');
+    el.className    = 'tap-item';
+    el.style.width  = SIZE + 'px';
+    el.style.height = SIZE + 'px';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'tap-overlay';
+    el.appendChild(overlay);
+
+    if (heroImgSrc) {
+      const img = document.createElement('img');
+      img.src = heroImgSrc; img.draggable = false;
+      el.appendChild(img);
+    } else {
+      el.style.fontSize   = SIZE * 0.7 + 'px';
+      el.style.lineHeight = '1';
+      el.insertAdjacentText('beforeend', EMOJIS[itemIndex++ % EMOJIS.length]);
+    }
+
+    const x = margin + Math.random() * Math.max(0, W - margin * 2 - SIZE);
+    const y = hudH + margin + Math.random() * Math.max(0, H - hudH - margin * 2 - SIZE);
+    el.style.left = x + 'px';
+    el.style.top  = y + 'px';
+
+    let taps = 0;
+    el.addEventListener('click', () => {
+      if (gameOver) return;
+      if (el.classList.contains('bursting') || el.classList.contains('pre-burst')) return;
+
+      taps++;
+      if (taps >= TAPS_MAX) {
+        el.classList.remove('stage-1','stage-2');
+        el.classList.add('pre-burst');
+        navigator.vibrate?.(60);
+
+        setTimeout(() => {
+          const { cx, cy } = createBurst(el);
+          playBurst();
+          shakeScreen();
+          showFloatScore(cx, cy);
+          el.classList.remove('pre-burst');
+          el.classList.add('bursting');
+
+          score++;
+          document.getElementById('hudScore').textContent = `💥 ${score}個`;
+
+          setTimeout(() => {
+            el.remove();
+            spawnItem(); // 破壊後すぐに新しい1個を追加
+          }, 430);
+        }, 160);
+
+      } else {
+        playHit(taps);
+        navigator.vibrate?.(20);
+        el.classList.remove('stage-1','stage-2','popping');
+        el.classList.add(`stage-${taps}`);
+        void el.offsetWidth;
+        el.classList.add('popping');
+        el.addEventListener('animationend', () => el.classList.remove('popping'), { once: true });
+      }
     });
+
+    $game.appendChild(el);
   }
 
-  /* ── スコア ── */
+  /* ── ゲーム開始 ── */
+  function startGame() {
+    $game.querySelectorAll('.tap-item,.particle,.float-score').forEach(e => e.remove());
+
+    score       = 0;
+    gameOver    = false;
+    itemIndex   = 0;
+    gameEndTime = Date.now() + GAME_DURATION * 1000;
+    stopTimer();
+
+    const timerEl = document.getElementById('hudTimer');
+    timerEl.textContent = GAME_DURATION.toFixed(2);
+    timerEl.classList.remove('orange','red');
+    document.getElementById('hudScore').textContent = '💥 0個';
+
+    showScreen($game);
+
+    for (let i = 0; i < ITEMS_ON_SCREEN; i++) spawnItem();
+    rafId = requestAnimationFrame(tickTimer);
+  }
+
+  /* ── ゲーム終了 ── */
+  function endGame() {
+    const flash = document.getElementById('clearFlash');
+    flash.classList.remove('flashing');
+    void flash.offsetWidth;
+    flash.classList.add('flashing');
+    playClear();
+    setTimeout(() => showResult(), 500);
+  }
+
+  /* ── スコア保存・ランキング ── */
   function loadScores() {
-    try { return JSON.parse(localStorage.getItem('tg_v1') || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem('tg_v2') || '[]'); } catch { return []; }
   }
-  function saveScore(name, time) {
+  function saveScore(s) {
     const list = loadScores();
-    list.push({ name, time });
-    list.sort((a, b) => a.time - b.time);
-    localStorage.setItem('tg_v1', JSON.stringify(list.slice(0, 20)));
+    list.push({ name: 'プレイヤー', score: s });
+    list.sort((a, b) => b.score - a.score); // 多い順
+    localStorage.setItem('tg_v2', JSON.stringify(list.slice(0, 20)));
   }
-  function rankOf(time) {
-    return loadScores().filter(s => s.time < time).length + 1;
+  function rankOf(s) {
+    return loadScores().filter(r => r.score > s).length + 1;
   }
   function renderLb(id) {
     const el  = document.getElementById(id);
@@ -462,169 +540,36 @@
       return;
     }
     el.innerHTML = '<div class="lb-title">🏆 ベスト 3</div>' +
-      top.map((s, i) =>
+      top.map((r, i) =>
         `<div class="lb-row">
            <span class="lb-medal">${MEDALS[i]}</span>
-           <span class="lb-name">${esc(s.name)}</span>
-           <span class="lb-time">${s.time.toFixed(2)}s</span>
+           <span class="lb-name">${esc(r.name)}</span>
+           <span class="lb-score">${r.score}個</span>
          </div>`
       ).join('');
   }
   function esc(s) {
-    return s.replace(/[&<>"']/g,
-      c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  /* ── 名前画面 ── */
+  /* ── リザルト ── */
+  function showResult() {
+    const rank = rankOf(score);
+    saveScore(score);
+    document.getElementById('resScore').textContent = score;
+    const labels = { 1:'🥇 1位！最高記録！', 2:'🥈 2位！', 3:'🥉 3位！' };
+    document.getElementById('resRank').textContent = labels[rank] || 'スコア記録！';
+    renderLb('resLb');
+    showScreen($result);
+  }
+
+  /* ── ボタン ── */
   document.getElementById('startBtn').addEventListener('click', () => {
     initAudio();
     const audio = new Audio('start.mp3');
     audio.play().catch(() => {});
     setTimeout(() => startGame(), 3000);
   });
-
-  /* ── 破裂パーティクル ── */
-  function createBurst(el) {
-    const rect     = el.getBoundingClientRect();
-    const gameRect = $game.getBoundingClientRect();
-    const cx = rect.left - gameRect.left + rect.width  / 2;
-    const cy = rect.top  - gameRect.top  + rect.height / 2;
-
-    const colors = ['#ff4400','#ff8800','#ffdd00','#ff2200','#ffaa00','#ffffff','#ff66aa'];
-    for (let i = 0; i < 14; i++) {
-      const p     = document.createElement('div');
-      p.className = 'particle';
-      const angle = (i / 14) * Math.PI * 2;
-      const dist  = 55 + Math.random() * 65;
-      const sz    = 7 + Math.random() * 9;
-      const color = colors[Math.floor(Math.random() * colors.length)];
-      p.style.cssText =
-        `width:${sz}px;height:${sz}px;background:${color};` +
-        `left:${cx - sz / 2}px;top:${cy - sz / 2}px;` +
-        `--dx:${(Math.cos(angle) * dist).toFixed(1)}px;` +
-        `--dy:${(Math.sin(angle) * dist).toFixed(1)}px;`;
-      $game.appendChild(p);
-      setTimeout(() => p.remove(), 650);
-    }
-    return { cx, cy };
-  }
-
-  /* ── ゲーム開始 ── */
-  function startGame() {
-    $game.querySelectorAll('.tap-item, .particle, .float-score').forEach(e => e.remove());
-
-    remaining = TOTAL;
-    startTime = null;
-    active    = false;
-    stopTimer();
-
-    const timerEl = document.getElementById('hudTimer');
-    timerEl.textContent = '0.00';
-    timerEl.classList.remove('orange', 'red');
-    document.getElementById('hudRemain').textContent = `残り ${TOTAL}個`;
-
-    showScreen($game);
-
-    const hudH   = $game.querySelector('.game-hud').offsetHeight || 56;
-    const margin = 20;
-    const W      = window.innerWidth;
-    const H      = window.innerHeight;
-
-    for (let i = 0; i < TOTAL; i++) {
-      const el = document.createElement('div');
-      el.className    = 'tap-item';
-      el.style.width  = SIZE + 'px';
-      el.style.height = SIZE + 'px';
-
-      const overlay = document.createElement('div');
-      overlay.className = 'tap-overlay';
-      el.appendChild(overlay);
-
-      if (heroImgSrc) {
-        const img = document.createElement('img');
-        img.src       = heroImgSrc;
-        img.draggable = false;
-        el.appendChild(img);
-      } else {
-        el.style.fontSize   = SIZE * 0.7 + 'px';
-        el.style.lineHeight = '1';
-        el.insertAdjacentText('beforeend', EMOJIS[i % EMOJIS.length]);
-      }
-
-      const x = margin + Math.random() * Math.max(0, W - margin * 2 - SIZE);
-      const y = hudH + margin + Math.random() * Math.max(0, H - hudH - margin * 2 - SIZE);
-      el.style.left = x + 'px';
-      el.style.top  = y + 'px';
-
-      let taps = 0;
-
-      el.addEventListener('click', () => {
-        if (el.classList.contains('bursting') || el.classList.contains('pre-burst')) return;
-
-        if (!active) {
-          active    = true;
-          startTime = Date.now();
-          rafId     = requestAnimationFrame(tickTimer);
-        }
-
-        taps++;
-
-        if (taps >= TAPS_MAX) {
-          el.classList.remove('stage-1', 'stage-2');
-          el.classList.add('pre-burst');
-          navigator.vibrate?.(60);
-
-          setTimeout(() => {
-            const { cx, cy } = createBurst(el);
-            playBurst();
-            shakeScreen();
-            showFloatScore(cx, cy);
-            el.classList.remove('pre-burst');
-            el.classList.add('bursting');
-            setTimeout(() => el.remove(), 430);
-          }, 160);
-
-          remaining--;
-          document.getElementById('hudRemain').textContent = `残り ${remaining}個`;
-          if (remaining <= 0) {
-            stopTimer();
-            const elapsed = (Date.now() - startTime) / 1000;
-            // クリアフラッシュ＋ファンファーレ
-            const flash = document.getElementById('clearFlash');
-            flash.classList.remove('flashing');
-            void flash.offsetWidth;
-            flash.classList.add('flashing');
-            playClear();
-            setTimeout(() => showResult(elapsed), 500);
-          }
-        } else {
-          playHit(taps);
-          navigator.vibrate?.(20);
-          el.classList.remove('stage-1', 'stage-2', 'popping');
-          el.classList.add(`stage-${taps}`);
-          void el.offsetWidth;
-          el.classList.add('popping');
-          el.addEventListener('animationend', () => el.classList.remove('popping'), { once: true });
-        }
-      });
-
-      $game.appendChild(el);
-    }
-  }
-
-  /* ── リザルト ── */
-  function showResult(elapsed) {
-    const rank = rankOf(elapsed);
-    saveScore(playerName, elapsed);
-
-    document.getElementById('resTime').textContent = elapsed.toFixed(2) + 's';
-    const labels = { 1:'🥇 1位！最速！', 2:'🥈 2位！', 3:'🥉 3位！' };
-    document.getElementById('resRank').textContent = labels[rank] || 'タイム記録！';
-
-    renderLb('resLb');
-    showScreen($result);
-  }
-
   document.getElementById('retryBtn').addEventListener('click', startGame);
   document.getElementById('backBtn').addEventListener('click', () => {
     renderLb('topLb');
@@ -634,7 +579,12 @@
   /* ── 起動時 ── */
   (async () => {
     renderLb('topLb');
-    heroImgSrc = await tryLoadHero();
+    heroImgSrc = await (new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve(img.src);
+      img.onerror = () => resolve(null);
+      img.src = HERO_SRC;
+    }));
   })();
 </script>
 </body>
