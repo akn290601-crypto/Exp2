@@ -234,7 +234,7 @@
 <div class="screen" id="nameScreen">
   <div class="logo">⚡</div>
   <h1>タップゲーム</h1>
-  <p class="sub">30秒間で何個破壊できるか！<br>3回タップで破裂！</p>
+  <p class="sub">99体を30秒以内に全滅させろ！<br>次々増殖する！3回タップで破裂！</p>
   <button class="btn btn-primary" id="startBtn">ゲームスタート</button>
   <div class="lb-wrap" id="topLb"></div>
 </div>
@@ -244,16 +244,16 @@
   <div id="clearFlash"></div>
   <div class="game-hud">
     <div class="hud-timer" id="hudTimer">30.00</div>
-    <div class="hud-score" id="hudScore">💥 0個</div>
+    <div class="hud-score" id="hudScore">💥 0/99</div>
   </div>
 </div>
 
 <!-- ③ リザルト -->
 <div class="screen hidden" id="resultScreen">
-  <div class="logo">🎉</div>
-  <h1>タイムアップ！</h1>
+  <div class="logo" id="resLogo">🎉</div>
+  <h1 id="resTitle"></h1>
   <div class="result-score" id="resScore"></div>
-  <div class="result-label">個破壊</div>
+  <div class="result-label" id="resLabel"></div>
   <div class="result-rank"  id="resRank"></div>
   <div class="lb-wrap" id="resLb"></div>
   <div class="btn-row">
@@ -265,20 +265,26 @@
 <script>
   'use strict';
 
-  const EMOJIS          = ['🍎','🍊','🍋','🍇','🍓','🍉','🍑','🌟','🎯','🦋','🌸','🎪','🍄','🎨','🌈'];
-  const TAPS_MAX        = 3;
-  const SIZE            = 120;
-  const MEDALS          = ['🥇','🥈','🥉'];
-  const HERO_SRC        = 'IMG_3716.png';
-  const GAME_DURATION   = 30;    // 秒
-  const ITEMS_ON_SCREEN = 5;     // 常時表示数
+  const EMOJIS            = ['🍎','🍊','🍋','🍇','🍓','🍉','🍑','🌟','🎯','🦋','🌸','🎪','🍄','🎨','🌈'];
+  const TAPS_MAX          = 3;
+  const SIZE              = 120;
+  const MEDALS            = ['🥇','🥈','🥉'];
+  const HERO_SRC          = 'IMG_3716.png';
+  const GAME_DURATION     = 30;
+  const TOTAL_ITEMS       = 99;
+  const SPAWN_INTERVAL_MS = 300;
+  const INITIAL_SPAWN     = 5;
 
-  let heroImgSrc  = null;
-  let score       = 0;
-  let gameEndTime = null;
-  let rafId       = null;
-  let gameOver    = false;
-  let itemIndex   = 0;
+  let heroImgSrc   = null;
+  let score        = 0;
+  let gameEndTime  = null;
+  let rafId        = null;
+  let gameOver     = false;
+  let gameWon      = false;
+  let itemIndex    = 0;
+  let totalSpawned = 0;
+  let spawnTimerId = null;
+  let startTime    = null;
 
   const $name   = document.getElementById('nameScreen');
   const $game   = document.getElementById('gameScreen');
@@ -361,11 +367,11 @@
     $game.addEventListener('animationend', () => $game.classList.remove('shaking'), { once: true });
   }
 
-  function showFloatScore(cx, cy) {
+  function showFloatScore(cx, cy, count) {
     const el = document.createElement('div');
     el.className = 'float-score';
-    el.textContent = '+1';
-    el.style.left = (cx - 20) + 'px';
+    el.textContent = count;
+    el.style.left = (cx - 24) + 'px';
     el.style.top  = (cy - 20) + 'px';
     $game.appendChild(el);
     setTimeout(() => el.remove(), 750);
@@ -406,7 +412,9 @@
 
       if (left <= 0) {
         gameOver = true;
+        gameWon  = false;
         stopTimer();
+        stopSpawn();
         endGame();
         return;
       }
@@ -417,7 +425,9 @@
 
   /* ── アイテム生成 ── */
   function spawnItem() {
-    if (gameOver) return;
+    if (gameOver || totalSpawned >= TOTAL_ITEMS) return;
+    totalSpawned++;
+
     const hudH  = $game.querySelector('.game-hud').offsetHeight || 56;
     const margin = 20;
     const W = window.innerWidth, H = window.innerHeight;
@@ -461,17 +471,23 @@
           const { cx, cy } = createBurst(el);
           playBurst();
           shakeScreen();
-          showFloatScore(cx, cy);
           el.classList.remove('pre-burst');
           el.classList.add('bursting');
 
           score++;
-          document.getElementById('hudScore').textContent = `💥 ${score}個`;
+          showFloatScore(cx, cy, score);
+          document.getElementById('hudScore').textContent = `💥 ${score}/${TOTAL_ITEMS}`;
 
-          setTimeout(() => {
-            el.remove();
-            spawnItem(); // 破壊後すぐに新しい1個を追加
-          }, 430);
+          if (score >= TOTAL_ITEMS) {
+            gameWon  = true;
+            gameOver = true;
+            stopSpawn();
+            stopTimer();
+            setTimeout(() => { el.remove(); endGame(); }, 430);
+            return;
+          }
+
+          setTimeout(() => el.remove(), 430);
         }, 160);
 
       } else {
@@ -488,24 +504,42 @@
     $game.appendChild(el);
   }
 
+  function spawnLoop() {
+    if (gameOver || totalSpawned >= TOTAL_ITEMS) return;
+    spawnItem();
+    if (totalSpawned < TOTAL_ITEMS) {
+      spawnTimerId = setTimeout(spawnLoop, SPAWN_INTERVAL_MS);
+    }
+  }
+
+  function stopSpawn() {
+    clearTimeout(spawnTimerId);
+    spawnTimerId = null;
+  }
+
   /* ── ゲーム開始 ── */
   function startGame() {
     $game.querySelectorAll('.tap-item,.particle,.float-score').forEach(e => e.remove());
 
-    score       = 0;
-    gameOver    = false;
-    itemIndex   = 0;
-    gameEndTime = Date.now() + GAME_DURATION * 1000;
+    score        = 0;
+    gameOver     = false;
+    gameWon      = false;
+    itemIndex    = 0;
+    totalSpawned = 0;
+    startTime    = Date.now();
+    gameEndTime  = startTime + GAME_DURATION * 1000;
     stopTimer();
+    stopSpawn();
 
     const timerEl = document.getElementById('hudTimer');
     timerEl.textContent = GAME_DURATION.toFixed(2);
     timerEl.classList.remove('orange','red');
-    document.getElementById('hudScore').textContent = '💥 0個';
+    document.getElementById('hudScore').textContent = `💥 0/${TOTAL_ITEMS}`;
 
     showScreen($game);
 
-    for (let i = 0; i < ITEMS_ON_SCREEN; i++) spawnItem();
+    for (let i = 0; i < INITIAL_SPAWN; i++) spawnItem();
+    spawnTimerId = setTimeout(spawnLoop, SPAWN_INTERVAL_MS);
     rafId = requestAnimationFrame(tickTimer);
   }
 
@@ -515,22 +549,27 @@
     flash.classList.remove('flashing');
     void flash.offsetWidth;
     flash.classList.add('flashing');
-    playClear();
-    setTimeout(() => showResult(), 500);
+    if (gameWon) playClear();
+    setTimeout(() => showResult(), gameWon ? 500 : 350);
   }
 
   /* ── スコア保存・ランキング ── */
   function loadScores() {
-    try { return JSON.parse(localStorage.getItem('tg_v2') || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem('tg_v3') || '[]'); } catch { return []; }
   }
-  function saveScore(s) {
+  function saveScore(won, elapsed, count) {
     const list = loadScores();
-    list.push({ name: 'プレイヤー', score: s });
-    list.sort((a, b) => b.score - a.score); // 多い順
-    localStorage.setItem('tg_v2', JSON.stringify(list.slice(0, 20)));
+    list.push({ won, time: won ? elapsed : null, score: count });
+    list.sort((a, b) => {
+      if (a.won && !b.won) return -1;
+      if (!a.won && b.won) return 1;
+      if (a.won && b.won) return a.time - b.time; // タイム短い順
+      return b.score - a.score;                   // 撃破数多い順
+    });
+    localStorage.setItem('tg_v3', JSON.stringify(list.slice(0, 20)));
   }
-  function rankOf(s) {
-    return loadScores().filter(r => r.score > s).length + 1;
+  function wonRankOf(elapsed) {
+    return loadScores().filter(r => r.won && r.time < elapsed).length + 1;
   }
   function renderLb(id) {
     const el  = document.getElementById(id);
@@ -543,22 +582,33 @@
       top.map((r, i) =>
         `<div class="lb-row">
            <span class="lb-medal">${MEDALS[i]}</span>
-           <span class="lb-name">${esc(r.name)}</span>
-           <span class="lb-score">${r.score}個</span>
+           <span class="lb-name">${r.won ? '全滅クリア' : `${r.score}体撃破`}</span>
+           <span class="lb-score">${r.won ? r.time.toFixed(1)+'秒' : r.score+'/99'}</span>
          </div>`
       ).join('');
-  }
-  function esc(s) {
-    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
   /* ── リザルト ── */
   function showResult() {
-    const rank = rankOf(score);
-    saveScore(score);
-    document.getElementById('resScore').textContent = score;
-    const labels = { 1:'🥇 1位！最高記録！', 2:'🥈 2位！', 3:'🥉 3位！' };
-    document.getElementById('resRank').textContent = labels[rank] || 'スコア記録！';
+    const elapsed = (Date.now() - startTime) / 1000;
+    if (gameWon) {
+      const rank = wonRankOf(elapsed);
+      saveScore(true, elapsed, score);
+      document.getElementById('resLogo').textContent  = '🎉';
+      document.getElementById('resTitle').textContent = '全滅！';
+      document.getElementById('resScore').textContent = elapsed.toFixed(1);
+      document.getElementById('resLabel').textContent = '秒でクリア！';
+      const labels = { 1:'🥇 最速記録！', 2:'🥈 2位！', 3:'🥉 3位！' };
+      document.getElementById('resRank').textContent  = labels[rank] || `第${rank}位`;
+    } else {
+      saveScore(false, null, score);
+      document.getElementById('resLogo').textContent  = '😤';
+      document.getElementById('resTitle').textContent = 'タイムアップ！';
+      document.getElementById('resScore').textContent = score;
+      document.getElementById('resLabel').textContent = `/ ${TOTAL_ITEMS}体撃破`;
+      const msg = score < 20 ? 'ファイト！' : score < 50 ? 'もう少し！' : 'あと一歩！';
+      document.getElementById('resRank').textContent  = msg;
+    }
     renderLb('resLb');
     showScreen($result);
   }
