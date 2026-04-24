@@ -149,24 +149,7 @@
     }
     .tap-item.spawning { animation: spawn-in 0.22s cubic-bezier(0.34,1.56,0.64,1) forwards; }
 
-    /* コンボ */
-    @keyframes combo-pop {
-      0%   { transform: scale(0.6) translateY(0);   opacity: 1; }
-      40%  { transform: scale(1.4) translateY(-10px); opacity: 1; }
-      100% { transform: scale(1.1) translateY(-40px); opacity: 0; }
-    }
-    .combo-text {
-      position: absolute;
-      font-size: 2rem;
-      font-weight: 900;
-      color: #ff3300;
-      text-shadow: 0 0 14px #ff8800, 0 2px 4px rgba(0,0,0,0.8);
-      pointer-events: none;
-      z-index: 25;
-      animation: combo-pop 0.65s ease-out forwards;
-    }
-
-    /* ── Tap items ── */
+/* ── Tap items ── */
     .tap-item {
       position: absolute;
       display: flex;
@@ -325,8 +308,6 @@
   let totalSpawned = 0;
   let spawnTimerId  = null;
   let startTime     = null;
-  let lastBurstTime = 0;
-  let comboCount    = 0;
 
   const $name   = document.getElementById('nameScreen');
   const $game   = document.getElementById('gameScreen');
@@ -441,17 +422,7 @@
     return { cx, cy };
   }
 
-  function showCombo(cx, cy, count) {
-    const el = document.createElement('div');
-    el.className = 'combo-text';
-    el.textContent = count >= 5 ? `FEVER! x${count}` : `COMBO x${count}`;
-    el.style.left = (cx - 60) + 'px';
-    el.style.top  = (cy - 30) + 'px';
-    $game.appendChild(el);
-    setTimeout(() => el.remove(), 700);
-  }
-
-  /* ── タイマー ── */
+/* ── タイマー ── */
   function tickTimer() {
     if (gameEndTime && !gameOver) {
       const left = Math.max(0, (gameEndTime - Date.now()) / 1000);
@@ -537,11 +508,6 @@
           document.getElementById('hudScore').textContent  = `💥 ${score}体撃破`;
           document.getElementById('hudRemain').textContent = `残り ${TOTAL_ITEMS - score}体`;
 
-          // コンボ判定
-          const now = Date.now();
-          if (now - lastBurstTime < 700) { comboCount++; } else { comboCount = 1; }
-          lastBurstTime = now;
-          if (comboCount >= 2) showCombo(cx, cy, comboCount);
 
           if (score >= TOTAL_ITEMS) {
             gameWon  = true;
@@ -600,8 +566,6 @@
     gameWon       = false;
     itemIndex     = 0;
     totalSpawned  = 0;
-    lastBurstTime = 0;
-    comboCount    = 0;
     startTime     = Date.now();
     gameEndTime   = startTime + GAME_DURATION * 1000;
     stopTimer();
