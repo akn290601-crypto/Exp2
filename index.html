@@ -364,16 +364,21 @@
   /* ── Audio ── */
   let audioCtx = null;
   function initAudio() {
-    if (audioCtx) { audioCtx.resume(); return; }
     try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const buf = audioCtx.createBuffer(1, 1, 22050);
-      const src = audioCtx.createBufferSource();
-      src.buffer = buf; src.connect(audioCtx.destination); src.start(0);
-      audioCtx.resume();
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      audioCtx.resume().then(() => {
+        const buf = audioCtx.createBuffer(1, 1, 22050);
+        const src = audioCtx.createBufferSource();
+        src.buffer = buf; src.connect(audioCtx.destination); src.start(0);
+      });
     } catch (_) {}
   }
-  function getCtx() { return audioCtx; }
+  function getCtx() {
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
 
   function playHit(stage) {
     try {
@@ -731,7 +736,9 @@ function runCountdown(cb) {
     audio.play().catch(() => {});
     setTimeout(() => startGame(), 1000);
   });
-  document.getElementById('retryBtn').addEventListener('click', startGame);
+  document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); startGame(); });
+  // ゲーム画面タップのたびにAudioContext再開（iOS対策）
+  document.getElementById('gameScreen').addEventListener('pointerdown', () => initAudio(), { capture: true });
   document.getElementById('backBtn').addEventListener('click', () => {
     renderLb('topLb');
     showScreen($name);
