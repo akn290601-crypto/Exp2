@@ -228,11 +228,6 @@
 </head>
 <body>
 
-<!-- 音声 -->
-<audio id="startAudio" preload="auto">
-  <source src="[シャア・アズナブル  |  平和的に]見せてもら......能とやらを.mp3" type="audio/mpeg">
-</audio>
-
 <!-- ① 名前入力 -->
 <div class="screen" id="nameScreen">
   <div class="logo">⚡</div>
@@ -346,12 +341,14 @@
   }
 
   /* ── 名前画面 ── */
+  const AUDIO_FILE = encodeURIComponent('[シャア・アズナブル  |  平和的に]見せてもら......能とやらを.mp3');
+
   document.getElementById('startBtn').addEventListener('click', () => {
     const v = document.getElementById('nameInput').value.trim();
     if (!v) { document.getElementById('nameInput').focus(); return; }
     playerName = v;
-    const audio = document.getElementById('startAudio');
-    audio.currentTime = 0;
+    // iOSはユーザー操作と同一タスク内でnew Audio().play()する必要がある
+    const audio = new Audio(AUDIO_FILE);
     audio.play().catch(() => {});
     startGame();
   });
