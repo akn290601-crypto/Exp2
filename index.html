@@ -114,6 +114,33 @@
       overflow: hidden;
       touch-action: none;
     }
+
+    /* 画面シェイク */
+    @keyframes shake {
+      0%,100% { transform: translate(0, 0) rotate(0deg); }
+      20%     { transform: translate(-6px,  3px) rotate(-0.5deg); }
+      40%     { transform: translate( 6px, -3px) rotate( 0.5deg); }
+      60%     { transform: translate(-4px,  2px) rotate(-0.3deg); }
+      80%     { transform: translate( 4px, -2px) rotate( 0.3deg); }
+    }
+    #gameScreen.shaking { animation: shake 0.3s ease; }
+
+    /* クリアフラッシュ */
+    #clearFlash {
+      position: absolute;
+      inset: 0;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 50;
+    }
+    @keyframes flash {
+      0%   { opacity: 0; }
+      30%  { opacity: 0.75; }
+      100% { opacity: 0; }
+    }
+    #clearFlash.flashing { animation: flash 0.4s ease-out forwards; }
+
     .game-hud {
       position: absolute;
       top: 0; left: 0; right: 0;
@@ -127,7 +154,19 @@
       -webkit-backdrop-filter: blur(8px);
       z-index: 10;
     }
-    .hud-timer  { font-size: 1.6rem; font-weight: 800; color: #ffd200; font-variant-numeric: tabular-nums; }
+    .hud-timer  {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #ffd200;
+      font-variant-numeric: tabular-nums;
+      transition: color 0.5s;
+    }
+    .hud-timer.orange { color: #ff8c00; }
+    .hud-timer.red    { color: #ff2200; animation: timer-blink 0.4s ease-in-out infinite alternate; }
+    @keyframes timer-blink {
+      from { opacity: 1; }
+      to   { opacity: 0.5; }
+    }
     .hud-remain { font-size: 0.9rem; color: #aaa; }
 
     /* ── Tap items ── */
@@ -160,13 +199,11 @@
       transition: opacity 0.15s;
       z-index: 1;
     }
-    /* 1回目：黄色く光る */
     .tap-item.stage-1 .tap-overlay {
       background: rgba(255, 210, 0, 0.5);
       opacity: 1;
       box-shadow: 0 0 20px 6px rgba(255, 210, 0, 0.7);
     }
-    /* 2回目：赤く光る＋点滅 */
     .tap-item.stage-2 .tap-overlay {
       background: rgba(255, 40, 0, 0.55);
       opacity: 1;
@@ -179,7 +216,6 @@
       to   { opacity: 1; }
     }
 
-    /* タップ時の弾むフィードバック */
     @keyframes pop {
       0%   { transform: scale(1); }
       35%  { transform: scale(1.2); }
@@ -187,19 +223,17 @@
     }
     .tap-item.popping { animation: pop 0.16s ease; }
 
-    /* 3回目：一瞬縮む */
     .tap-item.pre-burst {
       transform: scale(0.55) !important;
       transition: transform 0.14s ease-in !important;
       pointer-events: none;
     }
 
-    /* 破裂アニメーション（縮んだ状態から膨張して消える） */
     @keyframes burst {
       0%   { transform: scale(0.55) rotate(0deg);  opacity: 1; }
-      30%  { transform: scale(1.7) rotate(8deg);   opacity: 0.9; }
-      65%  { transform: scale(2.2) rotate(-6deg);  opacity: 0.4; }
-      100% { transform: scale(0.3) rotate(12deg);  opacity: 0; }
+      30%  { transform: scale(1.7)  rotate(8deg);  opacity: 0.9; }
+      65%  { transform: scale(2.2)  rotate(-6deg); opacity: 0.4; }
+      100% { transform: scale(0.3)  rotate(12deg); opacity: 0; }
     }
     .tap-item.bursting {
       animation: burst 0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
@@ -218,6 +252,23 @@
       pointer-events: none;
       z-index: 15;
       animation: particle-fly 0.55s ease-out forwards;
+    }
+
+    /* フロートスコア（+1） */
+    @keyframes float-up {
+      0%   { transform: translateY(0)    scale(1);    opacity: 1; }
+      60%  { transform: translateY(-40px) scale(1.1); opacity: 1; }
+      100% { transform: translateY(-70px) scale(0.8); opacity: 0; }
+    }
+    .float-score {
+      position: absolute;
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: #ffd200;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+      pointer-events: none;
+      z-index: 20;
+      animation: float-up 0.7s ease-out forwards;
     }
 
     /* 結果画面 */
@@ -251,6 +302,7 @@
 
 <!-- ② ゲーム -->
 <div class="screen hidden" id="gameScreen">
+  <div id="clearFlash"></div>
   <div class="game-hud">
     <div class="hud-timer"  id="hudTimer">0.00</div>
     <div class="hud-remain" id="hudRemain">残り 8個</div>
@@ -276,7 +328,7 @@
   const EMOJIS   = ['🍎','🍊','🍋','🍇','🍓','🍉','🍑','🌟','🎯','🦋','🌸','🎪','🍄','🎨','🌈'];
   const TOTAL    = 8;
   const TAPS_MAX = 3;
-  const SIZE     = 120;   // 固定サイズ（縮まない）
+  const SIZE     = 120;
   const MEDALS   = ['🥇','🥈','🥉'];
   const HERO_SRC = 'IMG_3716.png';
 
@@ -295,6 +347,124 @@
     [$name, $game, $result].forEach(s => s.classList.add('hidden'));
     el.classList.remove('hidden');
   }
+
+  /* ── Web Audio API ── */
+  let audioCtx = null;
+  function getCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function playHit(stage) {
+    try {
+      const ctx  = getCtx();
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(stage === 1 ? 180 : 260, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(stage === 1 ? 120 : 180, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.1);
+    } catch (_) {}
+  }
+
+  function playBurst() {
+    try {
+      const ctx    = getCtx();
+      // ノイズバースト
+      const buf    = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate);
+      const data   = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
+      const noise  = ctx.createBufferSource();
+      noise.buffer = buf;
+      const nGain  = ctx.createGain();
+      noise.connect(nGain);
+      nGain.connect(ctx.destination);
+      nGain.gain.setValueAtTime(0.4, ctx.currentTime);
+      nGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28);
+      noise.start(ctx.currentTime);
+      // 低音ドロップ
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(140, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.25);
+      gain.gain.setValueAtTime(0.5, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+    } catch (_) {}
+  }
+
+  function playClear() {
+    try {
+      const ctx   = getCtx();
+      const notes = [523, 659, 784, 1047]; // C5 E5 G5 C6
+      notes.forEach((freq, i) => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'triangle';
+        const t = ctx.currentTime + i * 0.1;
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0.35, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+        osc.start(t);
+        osc.stop(t + 0.25);
+      });
+    } catch (_) {}
+  }
+
+  /* ── 画面シェイク ── */
+  function shakeScreen() {
+    $game.classList.remove('shaking');
+    void $game.offsetWidth;
+    $game.classList.add('shaking');
+    $game.addEventListener('animationend', () => $game.classList.remove('shaking'), { once: true });
+  }
+
+  /* ── フロートスコア ── */
+  function showFloatScore(cx, cy) {
+    const el = document.createElement('div');
+    el.className   = 'float-score';
+    el.textContent = '+1';
+    el.style.left  = (cx - 20) + 'px';
+    el.style.top   = (cy - 20) + 'px';
+    $game.appendChild(el);
+    setTimeout(() => el.remove(), 750);
+  }
+
+  /* ── タイマー色 ── */
+  function updateTimerColor(elapsed) {
+    const el = document.getElementById('hudTimer');
+    if (elapsed >= 20) {
+      el.classList.remove('orange');
+      el.classList.add('red');
+    } else if (elapsed >= 10) {
+      el.classList.remove('red');
+      el.classList.add('orange');
+    } else {
+      el.classList.remove('orange', 'red');
+    }
+  }
+
+  /* ── タイマー ── */
+  function tickTimer() {
+    if (startTime) {
+      const elapsed = (Date.now() - startTime) / 1000;
+      document.getElementById('hudTimer').textContent = elapsed.toFixed(2);
+      updateTimerColor(elapsed);
+    }
+    rafId = requestAnimationFrame(tickTimer);
+  }
+  function stopTimer() { cancelAnimationFrame(rafId); rafId = null; }
 
   /* ── 画像自動ロード ── */
   function tryLoadHero() {
@@ -341,29 +511,19 @@
   }
 
   /* ── 名前画面 ── */
-  const AUDIO_FILE = 'start.mp3';
-
   document.getElementById('startBtn').addEventListener('click', () => {
     const v = document.getElementById('nameInput').value.trim();
     if (!v) { document.getElementById('nameInput').focus(); return; }
     playerName = v;
-    // iOSはユーザー操作と同一タスク内でnew Audio().play()する必要がある
-    const audio = new Audio(AUDIO_FILE);
+    // AudioContext はユーザー操作で初期化（iOS対応）
+    getCtx();
+    const audio = new Audio('start.mp3');
     audio.play().catch(() => {});
     startGame();
   });
   document.getElementById('nameInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('startBtn').click();
   });
-
-  /* ── タイマー ── */
-  function tickTimer() {
-    if (startTime)
-      document.getElementById('hudTimer').textContent =
-        ((Date.now() - startTime) / 1000).toFixed(2);
-    rafId = requestAnimationFrame(tickTimer);
-  }
-  function stopTimer() { cancelAnimationFrame(rafId); rafId = null; }
 
   /* ── 破裂パーティクル ── */
   function createBurst(el) {
@@ -373,12 +533,10 @@
     const cy = rect.top  - gameRect.top  + rect.height / 2;
 
     const colors = ['#ff4400','#ff8800','#ffdd00','#ff2200','#ffaa00','#ffffff','#ff66aa'];
-    const count  = 14;
-
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < 14; i++) {
       const p     = document.createElement('div');
       p.className = 'particle';
-      const angle = (i / count) * Math.PI * 2;
+      const angle = (i / 14) * Math.PI * 2;
       const dist  = 55 + Math.random() * 65;
       const sz    = 7 + Math.random() * 9;
       const color = colors[Math.floor(Math.random() * colors.length)];
@@ -390,18 +548,21 @@
       $game.appendChild(p);
       setTimeout(() => p.remove(), 650);
     }
+    return { cx, cy };
   }
 
   /* ── ゲーム開始 ── */
   function startGame() {
-    $game.querySelectorAll('.tap-item, .particle').forEach(e => e.remove());
+    $game.querySelectorAll('.tap-item, .particle, .float-score').forEach(e => e.remove());
 
     remaining = TOTAL;
     startTime = null;
     active    = false;
     stopTimer();
 
-    document.getElementById('hudTimer').textContent  = '0.00';
+    const timerEl = document.getElementById('hudTimer');
+    timerEl.textContent = '0.00';
+    timerEl.classList.remove('orange', 'red');
     document.getElementById('hudRemain').textContent = `残り ${TOTAL}個`;
 
     showScreen($game);
@@ -413,11 +574,10 @@
 
     for (let i = 0; i < TOTAL; i++) {
       const el = document.createElement('div');
-      el.className = 'tap-item';
+      el.className    = 'tap-item';
       el.style.width  = SIZE + 'px';
       el.style.height = SIZE + 'px';
 
-      /* オーバーレイ（色変化用） */
       const overlay = document.createElement('div');
       overlay.className = 'tap-overlay';
       el.appendChild(overlay);
@@ -441,7 +601,7 @@
       let taps = 0;
 
       el.addEventListener('click', () => {
-        if (el.classList.contains('bursting')) return;
+        if (el.classList.contains('bursting') || el.classList.contains('pre-burst')) return;
 
         if (!active) {
           active    = true;
@@ -452,11 +612,15 @@
         taps++;
 
         if (taps >= TAPS_MAX) {
-          /* 縮んでから破裂 */
           el.classList.remove('stage-1', 'stage-2');
           el.classList.add('pre-burst');
+          navigator.vibrate?.(60);
+
           setTimeout(() => {
-            createBurst(el);
+            const { cx, cy } = createBurst(el);
+            playBurst();
+            shakeScreen();
+            showFloatScore(cx, cy);
             el.classList.remove('pre-burst');
             el.classList.add('bursting');
             setTimeout(() => el.remove(), 430);
@@ -467,10 +631,17 @@
           if (remaining <= 0) {
             stopTimer();
             const elapsed = (Date.now() - startTime) / 1000;
-            setTimeout(() => showResult(elapsed), 480);
+            // クリアフラッシュ＋ファンファーレ
+            const flash = document.getElementById('clearFlash');
+            flash.classList.remove('flashing');
+            void flash.offsetWidth;
+            flash.classList.add('flashing');
+            playClear();
+            setTimeout(() => showResult(elapsed), 500);
           }
         } else {
-          /* 色変化 */
+          playHit(taps);
+          navigator.vibrate?.(20);
           el.classList.remove('stage-1', 'stage-2', 'popping');
           el.classList.add(`stage-${taps}`);
           void el.offsetWidth;
