@@ -54,7 +54,6 @@
     input[type="text"]::placeholder { color: #555; }
     input[type="text"]:focus { border-color: #f7971e; }
 
-    /* hero image preview on name screen */
     .hero-preview-wrap {
       width: 100%;
       max-width: 280px;
@@ -140,32 +139,81 @@
       cursor: pointer;
       transform-origin: center;
       -webkit-tap-highlight-color: transparent;
-      transition: width 0.12s ease, height 0.12s ease, font-size 0.12s ease;
-      overflow: hidden;
+      border-radius: 12px;
     }
     .tap-item img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      border-radius: 10px;
+      border-radius: 12px;
       pointer-events: none;
       display: block;
     }
 
+    /* 色変化オーバーレイ */
+    .tap-overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s;
+      z-index: 1;
+    }
+    /* 1回目：黄色く光る */
+    .tap-item.stage-1 .tap-overlay {
+      background: rgba(255, 210, 0, 0.5);
+      opacity: 1;
+      box-shadow: 0 0 20px 6px rgba(255, 210, 0, 0.7);
+    }
+    /* 2回目：赤く光る＋点滅 */
+    .tap-item.stage-2 .tap-overlay {
+      background: rgba(255, 40, 0, 0.55);
+      opacity: 1;
+      box-shadow: 0 0 28px 8px rgba(255, 40, 0, 0.8);
+      animation: danger-pulse 0.22s ease-in-out infinite alternate;
+    }
+
+    @keyframes danger-pulse {
+      from { opacity: 0.85; }
+      to   { opacity: 1; }
+    }
+
+    /* タップ時の弾むフィードバック */
     @keyframes pop {
       0%   { transform: scale(1); }
-      40%  { transform: scale(1.35); }
+      35%  { transform: scale(1.2); }
       100% { transform: scale(1); }
     }
-    @keyframes vanish {
-      0%   { transform: scale(1);   opacity: 1; }
-      60%  { transform: scale(1.3); opacity: 0.5; }
-      100% { transform: scale(0);   opacity: 0; }
-    }
-    .tap-item.popping  { animation: pop    0.18s ease; }
-    .tap-item.vanishing{ animation: vanish 0.28s ease forwards; pointer-events: none; }
+    .tap-item.popping { animation: pop 0.16s ease; }
 
-    /* ── Result screen ── */
+    /* 破裂アニメーション */
+    @keyframes burst {
+      0%   { transform: scale(1) rotate(0deg);    opacity: 1; }
+      30%  { transform: scale(1.6) rotate(8deg);  opacity: 0.9; }
+      70%  { transform: scale(2.2) rotate(-6deg); opacity: 0.4; }
+      100% { transform: scale(0.4) rotate(12deg); opacity: 0; }
+    }
+    .tap-item.bursting {
+      animation: burst 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* パーティクル */
+    @keyframes particle-fly {
+      0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+      100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+    }
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 15;
+      animation: particle-fly 0.55s ease-out forwards;
+    }
+
+    /* 結果画面 */
     .result-time { font-size: 3.5rem; font-weight: 900; color: #ffd200; margin: 12px 0 4px; }
     .result-rank { font-size: 1rem; color: #aaa; margin-bottom: 20px; }
     .btn-row { display: flex; gap: 12px; margin-top: 20px; }
@@ -177,12 +225,11 @@
 <div class="screen" id="nameScreen">
   <div class="logo">⚡</div>
   <h1>タップゲーム</h1>
-  <p class="sub">画像を3回タップして消そう！<br>速さを競え！</p>
+  <p class="sub">画像を3回タップして破裂させろ！<br>速さを競え！</p>
 
   <input type="text" id="nameInput" placeholder="プレイヤー名を入力"
     maxlength="12" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 
-  <!-- hero.jpg が存在するときだけ表示 -->
   <div class="hero-preview-wrap hidden" id="heroPreviewWrap">
     <img id="heroThumb" src="" alt="hero">
     <div class="hero-preview-text">
@@ -199,7 +246,7 @@
 <div class="screen hidden" id="gameScreen">
   <div class="game-hud">
     <div class="hud-timer"  id="hudTimer">0.00</div>
-    <div class="hud-remain" id="hudRemain">残り 15個</div>
+    <div class="hud-remain" id="hudRemain">残り 8個</div>
   </div>
 </div>
 
@@ -222,16 +269,16 @@
   const EMOJIS   = ['🍎','🍊','🍋','🍇','🍓','🍉','🍑','🌟','🎯','🦋','🌸','🎪','🍄','🎨','🌈'];
   const TOTAL    = 8;
   const TAPS_MAX = 3;
-  const SIZES    = [120, 80, 45];
+  const SIZE     = 120;   // 固定サイズ（縮まない）
   const MEDALS   = ['🥇','🥈','🥉'];
-  const HERO_SRC = 'IMG_3716.png';   // リポジトリに置く画像ファイル名
+  const HERO_SRC = 'IMG_3716.png';
 
-  let playerName   = '';
-  let heroImgSrc   = null;   // hero.jpg が読み込めたらここに格納
-  let startTime    = null;
-  let rafId        = null;
-  let remaining    = 0;
-  let active       = false;
+  let playerName = '';
+  let heroImgSrc = null;
+  let startTime  = null;
+  let rafId      = null;
+  let remaining  = 0;
+  let active     = false;
 
   const $name   = document.getElementById('nameScreen');
   const $game   = document.getElementById('gameScreen');
@@ -242,17 +289,17 @@
     el.classList.remove('hidden');
   }
 
-  /* ── hero.jpg を自動ロード ── */
+  /* ── 画像自動ロード ── */
   function tryLoadHero() {
     return new Promise(resolve => {
       const img = new Image();
-      img.onload = () => resolve(img.src);
+      img.onload  = () => resolve(img.src);
       img.onerror = () => resolve(null);
       img.src = HERO_SRC;
     });
   }
 
-  /* ── localStorage scores ── */
+  /* ── スコア ── */
   function loadScores() {
     try { return JSON.parse(localStorage.getItem('tg_v1') || '[]'); } catch { return []; }
   }
@@ -286,7 +333,7 @@
       c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  /* ── Name screen ── */
+  /* ── 名前画面 ── */
   document.getElementById('startBtn').addEventListener('click', () => {
     const v = document.getElementById('nameInput').value.trim();
     if (!v) { document.getElementById('nameInput').focus(); return; }
@@ -297,19 +344,45 @@
     if (e.key === 'Enter') document.getElementById('startBtn').click();
   });
 
-  /* ── Timer ── */
+  /* ── タイマー ── */
   function tickTimer() {
-    if (startTime) {
+    if (startTime)
       document.getElementById('hudTimer').textContent =
         ((Date.now() - startTime) / 1000).toFixed(2);
-    }
     rafId = requestAnimationFrame(tickTimer);
   }
   function stopTimer() { cancelAnimationFrame(rafId); rafId = null; }
 
-  /* ── Game ── */
+  /* ── 破裂パーティクル ── */
+  function createBurst(el) {
+    const rect     = el.getBoundingClientRect();
+    const gameRect = $game.getBoundingClientRect();
+    const cx = rect.left - gameRect.left + rect.width  / 2;
+    const cy = rect.top  - gameRect.top  + rect.height / 2;
+
+    const colors = ['#ff4400','#ff8800','#ffdd00','#ff2200','#ffaa00','#ffffff','#ff66aa'];
+    const count  = 14;
+
+    for (let i = 0; i < count; i++) {
+      const p     = document.createElement('div');
+      p.className = 'particle';
+      const angle = (i / count) * Math.PI * 2;
+      const dist  = 55 + Math.random() * 65;
+      const sz    = 7 + Math.random() * 9;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      p.style.cssText =
+        `width:${sz}px;height:${sz}px;background:${color};` +
+        `left:${cx - sz / 2}px;top:${cy - sz / 2}px;` +
+        `--dx:${(Math.cos(angle) * dist).toFixed(1)}px;` +
+        `--dy:${(Math.sin(angle) * dist).toFixed(1)}px;`;
+      $game.appendChild(p);
+      setTimeout(() => p.remove(), 650);
+    }
+  }
+
+  /* ── ゲーム開始 ── */
   function startGame() {
-    $game.querySelectorAll('.tap-item').forEach(e => e.remove());
+    $game.querySelectorAll('.tap-item, .particle').forEach(e => e.remove());
 
     remaining = TOTAL;
     startTime = null;
@@ -322,15 +395,20 @@
     showScreen($game);
 
     const hudH   = $game.querySelector('.game-hud').offsetHeight || 56;
-    const margin = 36;
+    const margin = 20;
     const W      = window.innerWidth;
     const H      = window.innerHeight;
-    const sz0    = SIZES[0];
 
     for (let i = 0; i < TOTAL; i++) {
       const el = document.createElement('div');
       el.className = 'tap-item';
-      setSize(el, sz0);
+      el.style.width  = SIZE + 'px';
+      el.style.height = SIZE + 'px';
+
+      /* オーバーレイ（色変化用） */
+      const overlay = document.createElement('div');
+      overlay.className = 'tap-overlay';
+      el.appendChild(overlay);
 
       if (heroImgSrc) {
         const img = document.createElement('img');
@@ -338,20 +416,20 @@
         img.draggable = false;
         el.appendChild(img);
       } else {
-        el.textContent    = EMOJIS[i % EMOJIS.length];
-        el.style.fontSize = sz0 + 'px';
+        el.style.fontSize   = SIZE * 0.7 + 'px';
         el.style.lineHeight = '1';
+        el.insertAdjacentText('beforeend', EMOJIS[i % EMOJIS.length]);
       }
 
-      const x = margin + Math.random() * Math.max(0, W - margin * 2 - sz0);
-      const y = hudH + margin + Math.random() * Math.max(0, H - hudH - margin * 2 - sz0);
+      const x = margin + Math.random() * Math.max(0, W - margin * 2 - SIZE);
+      const y = hudH + margin + Math.random() * Math.max(0, H - hudH - margin * 2 - SIZE);
       el.style.left = x + 'px';
       el.style.top  = y + 'px';
 
       let taps = 0;
 
       el.addEventListener('click', () => {
-        if (el.classList.contains('vanishing')) return;
+        if (el.classList.contains('bursting')) return;
 
         if (!active) {
           active    = true;
@@ -362,20 +440,22 @@
         taps++;
 
         if (taps >= TAPS_MAX) {
-          el.classList.add('vanishing');
-          setTimeout(() => el.remove(), 290);
+          /* 破裂！ */
+          createBurst(el);
+          el.classList.add('bursting');
+          setTimeout(() => el.remove(), 460);
+
           remaining--;
           document.getElementById('hudRemain').textContent = `残り ${remaining}個`;
           if (remaining <= 0) {
             stopTimer();
             const elapsed = (Date.now() - startTime) / 1000;
-            setTimeout(() => showResult(elapsed), 320);
+            setTimeout(() => showResult(elapsed), 480);
           }
         } else {
-          const sz = SIZES[taps];
-          setSize(el, sz);
-          if (!heroImgSrc) el.style.fontSize = sz + 'px';
-          el.classList.remove('popping');
+          /* 色変化 */
+          el.classList.remove('stage-1', 'stage-2', 'popping');
+          el.classList.add(`stage-${taps}`);
           void el.offsetWidth;
           el.classList.add('popping');
           el.addEventListener('animationend', () => el.classList.remove('popping'), { once: true });
@@ -386,12 +466,7 @@
     }
   }
 
-  function setSize(el, px) {
-    el.style.width  = px + 'px';
-    el.style.height = px + 'px';
-  }
-
-  /* ── Result ── */
+  /* ── リザルト ── */
   function showResult(elapsed) {
     const rank = rankOf(elapsed);
     saveScore(playerName, elapsed);
@@ -410,15 +485,13 @@
     showScreen($name);
   });
 
-  /* ── 起動時：hero.jpg を試みる ── */
+  /* ── 起動時 ── */
   (async () => {
     renderLb('topLb');
     heroImgSrc = await tryLoadHero();
     if (heroImgSrc) {
-      const wrap  = document.getElementById('heroPreviewWrap');
-      const thumb = document.getElementById('heroThumb');
-      thumb.src = heroImgSrc;
-      wrap.classList.remove('hidden');
+      document.getElementById('heroThumb').src = heroImgSrc;
+      document.getElementById('heroPreviewWrap').classList.remove('hidden');
     }
   })();
 </script>
