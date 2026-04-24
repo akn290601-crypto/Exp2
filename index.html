@@ -136,7 +136,34 @@
     @keyframes timer-blink { from { opacity:1; } to { opacity:0.4; } }
 
     /* スコア表示 */
-    .hud-score { font-size: 1rem; font-weight: 700; color: #fff; }
+    .hud-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+    .hud-score  { font-size: 0.85rem; font-weight: 700; color: #ffd200; }
+    .hud-remain { font-size: 1.1rem;  font-weight: 900; color: #ff6633; letter-spacing: 0.04em; }
+
+    /* スポーン演出 */
+    @keyframes spawn-in {
+      0%   { transform: scale(0.1) rotate(-20deg); opacity: 0; }
+      65%  { transform: scale(1.18) rotate(4deg);  opacity: 1; }
+      100% { transform: scale(1)   rotate(0deg);   opacity: 1; }
+    }
+    .tap-item.spawning { animation: spawn-in 0.22s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+    /* コンボ */
+    @keyframes combo-pop {
+      0%   { transform: scale(0.6) translateY(0);   opacity: 1; }
+      40%  { transform: scale(1.4) translateY(-10px); opacity: 1; }
+      100% { transform: scale(1.1) translateY(-40px); opacity: 0; }
+    }
+    .combo-text {
+      position: absolute;
+      font-size: 2rem;
+      font-weight: 900;
+      color: #ff3300;
+      text-shadow: 0 0 14px #ff8800, 0 2px 4px rgba(0,0,0,0.8);
+      pointer-events: none;
+      z-index: 25;
+      animation: combo-pop 0.65s ease-out forwards;
+    }
 
     /* ── Tap items ── */
     .tap-item {
@@ -253,7 +280,10 @@
   <div id="clearFlash"></div>
   <div class="game-hud">
     <div class="hud-timer" id="hudTimer">30.00</div>
-    <div class="hud-score" id="hudScore">💥 0/99</div>
+    <div class="hud-right">
+      <div class="hud-score"  id="hudScore">💥 0体撃破</div>
+      <div class="hud-remain" id="hudRemain">残り 99体</div>
+    </div>
   </div>
 </div>
 
@@ -292,8 +322,10 @@
   let gameWon      = false;
   let itemIndex    = 0;
   let totalSpawned = 0;
-  let spawnTimerId = null;
-  let startTime    = null;
+  let spawnTimerId  = null;
+  let startTime     = null;
+  let lastBurstTime = 0;
+  let comboCount    = 0;
 
   const $name   = document.getElementById('nameScreen');
   const $game   = document.getElementById('gameScreen');
@@ -391,13 +423,13 @@
     const gr   = $game.getBoundingClientRect();
     const cx   = rect.left - gr.left + rect.width  / 2;
     const cy   = rect.top  - gr.top  + rect.height / 2;
-    const colors = ['#ff4400','#ff8800','#ffdd00','#ff2200','#ffaa00','#ffffff','#ff66aa'];
-    for (let i = 0; i < 14; i++) {
+    const colors = ['#ff4400','#ff8800','#ffdd00','#ff2200','#ffaa00','#ffffff','#ff66aa','#ffcc00','#ff0066'];
+    for (let i = 0; i < 22; i++) {
       const p = document.createElement('div');
       p.className = 'particle';
-      const angle = (i / 14) * Math.PI * 2;
-      const dist  = 55 + Math.random() * 65;
-      const sz    = 7 + Math.random() * 9;
+      const angle = (i / 22) * Math.PI * 2;
+      const dist  = 65 + Math.random() * 90;
+      const sz    = 8 + Math.random() * 12;
       p.style.cssText =
         `width:${sz}px;height:${sz}px;background:${colors[i%colors.length]};` +
         `left:${cx-sz/2}px;top:${cy-sz/2}px;` +
@@ -406,6 +438,16 @@
       setTimeout(() => p.remove(), 650);
     }
     return { cx, cy };
+  }
+
+  function showCombo(cx, cy, count) {
+    const el = document.createElement('div');
+    el.className = 'combo-text';
+    el.textContent = count >= 5 ? `FEVER! x${count}` : `COMBO x${count}`;
+    el.style.left = (cx - 60) + 'px';
+    el.style.top  = (cy - 30) + 'px';
+    $game.appendChild(el);
+    setTimeout(() => el.remove(), 700);
   }
 
   /* ── タイマー ── */
@@ -491,7 +533,14 @@
 
           score++;
           showFloatScore(cx, cy, score);
-          document.getElementById('hudScore').textContent = `💥 ${score}/${TOTAL_ITEMS}`;
+          document.getElementById('hudScore').textContent  = `💥 ${score}体撃破`;
+          document.getElementById('hudRemain').textContent = `残り ${TOTAL_ITEMS - score}体`;
+
+          // コンボ判定
+          const now = Date.now();
+          if (now - lastBurstTime < 700) { comboCount++; } else { comboCount = 1; }
+          lastBurstTime = now;
+          if (comboCount >= 2) showCombo(cx, cy, comboCount);
 
           if (score >= TOTAL_ITEMS) {
             gameWon  = true;
@@ -516,14 +565,23 @@
       }
     });
 
+    el.classList.add('spawning');
+    el.addEventListener('animationend', () => el.classList.remove('spawning'), { once: true });
     $game.appendChild(el);
+  }
+
+  function getSpawnInterval() {
+    if (score >= 80) return 150;
+    if (score >= 60) return 200;
+    if (score >= 30) return 250;
+    return SPAWN_INTERVAL_MS;
   }
 
   function spawnLoop() {
     if (gameOver || totalSpawned >= TOTAL_ITEMS) return;
     spawnItem();
     if (totalSpawned < TOTAL_ITEMS) {
-      spawnTimerId = setTimeout(spawnLoop, SPAWN_INTERVAL_MS);
+      spawnTimerId = setTimeout(spawnLoop, getSpawnInterval());
     }
   }
 
@@ -536,20 +594,23 @@
   function startGame() {
     $game.querySelectorAll('.tap-item,.particle,.float-score').forEach(e => e.remove());
 
-    score        = 0;
-    gameOver     = false;
-    gameWon      = false;
-    itemIndex    = 0;
-    totalSpawned = 0;
-    startTime    = Date.now();
-    gameEndTime  = startTime + GAME_DURATION * 1000;
+    score         = 0;
+    gameOver      = false;
+    gameWon       = false;
+    itemIndex     = 0;
+    totalSpawned  = 0;
+    lastBurstTime = 0;
+    comboCount    = 0;
+    startTime     = Date.now();
+    gameEndTime   = startTime + GAME_DURATION * 1000;
     stopTimer();
     stopSpawn();
 
     const timerEl = document.getElementById('hudTimer');
     timerEl.textContent = GAME_DURATION.toFixed(2);
     timerEl.classList.remove('orange','red');
-    document.getElementById('hudScore').textContent = `💥 0/${TOTAL_ITEMS}`;
+    document.getElementById('hudScore').textContent  = '💥 0体撃破';
+    document.getElementById('hudRemain').textContent = `残り ${TOTAL_ITEMS}体`;
 
     showScreen($game);
 
