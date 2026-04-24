@@ -113,32 +113,33 @@
     .game-hud {
       position: absolute;
       top: 0; left: 0; right: 0;
-      padding: 12px 20px;
-      padding-top: max(12px, env(safe-area-inset-top));
+      padding: 8px 14px;
+      padding-top: max(8px, env(safe-area-inset-top));
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(0,0,0,0.45);
+      background: rgba(0,0,0,0.55);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       z-index: 10;
     }
     /* カウントダウン */
     .hud-timer {
-      font-size: 1.6rem;
+      font-size: 1.4rem;
       font-weight: 800;
       color: #ffd200;
       font-variant-numeric: tabular-nums;
       transition: color 0.4s;
+      flex-shrink: 0;
     }
     .hud-timer.orange { color: #ff8c00; }
     .hud-timer.red    { color: #ff2200; animation: timer-blink 0.35s ease-in-out infinite alternate; }
     @keyframes timer-blink { from { opacity:1; } to { opacity:0.4; } }
 
     /* スコア表示 */
-    .hud-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-    .hud-score  { font-size: 0.85rem; font-weight: 700; color: #ffd200; }
-    .hud-remain { font-size: 1.1rem;  font-weight: 900; color: #ff6633; letter-spacing: 0.04em; }
+    .hud-right  { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex-shrink: 0; }
+    .hud-score  { font-size: 0.75rem; font-weight: 700; color: #ffd200; white-space: nowrap; }
+    .hud-remain { font-size: 0.95rem; font-weight: 900; color: #ff6633; white-space: nowrap; }
 
     /* スポーン演出 */
     @keyframes spawn-in {
