@@ -228,6 +228,11 @@
 </head>
 <body>
 
+<!-- 音声 -->
+<audio id="startAudio" preload="auto">
+  <source src="[シャア・アズナブル  |  平和的に]見せてもら......能とやらを.mp3" type="audio/mpeg">
+</audio>
+
 <!-- ① 名前入力 -->
 <div class="screen" id="nameScreen">
   <div class="logo">⚡</div>
@@ -345,6 +350,9 @@
     const v = document.getElementById('nameInput').value.trim();
     if (!v) { document.getElementById('nameInput').focus(); return; }
     playerName = v;
+    const audio = document.getElementById('startAudio');
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
     startGame();
   });
   document.getElementById('nameInput').addEventListener('keydown', e => {
