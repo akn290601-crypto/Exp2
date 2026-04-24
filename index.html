@@ -294,7 +294,7 @@
   const MEDALS            = ['🥇','🥈','🥉'];
   const HERO_SRCS         = ['IMG_3716.png','IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png'];
   const GAME_DURATION     = 30;
-  const TOTAL_ITEMS       = 99;
+  const TOTAL_ITEMS       = 108;
   const SPAWN_INTERVAL_MS = 300;
   const INITIAL_SPAWN     = 5;
 
@@ -639,7 +639,7 @@
     initAudio();
     const audio = new Audio('start.mp3');
     audio.play().catch(() => {});
-    setTimeout(() => startGame(), 3000);
+    setTimeout(() => startGame(), 1000);
   });
   document.getElementById('retryBtn').addEventListener('click', startGame);
   document.getElementById('backBtn').addEventListener('click', () => {
