@@ -37,22 +37,6 @@
     h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; }
     .sub { color: #aaa; font-size: 0.9rem; margin-bottom: 28px; text-align: center; line-height: 1.6; }
 
-    input[type="text"] {
-      width: 100%;
-      max-width: 280px;
-      padding: 14px 18px;
-      border: 2px solid rgba(255,255,255,0.15);
-      border-radius: 14px;
-      background: rgba(255,255,255,0.08);
-      color: #fff;
-      font-size: 1rem;
-      text-align: center;
-      outline: none;
-      margin-bottom: 16px;
-      transition: border-color 0.2s;
-    }
-    input[type="text"]::placeholder { color: #555; }
-    input[type="text"]:focus { border-color: #f7971e; }
 
     .hero-preview-wrap {
       width: 100%;
@@ -285,9 +269,6 @@
   <h1>タップゲーム</h1>
   <p class="sub">画像を3回タップして破裂させろ！<br>速さを競え！</p>
 
-  <input type="text" id="nameInput" placeholder="プレイヤー名を入力"
-    maxlength="12" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-
   <div class="hero-preview-wrap hidden" id="heroPreviewWrap">
     <img id="heroThumb" src="" alt="hero">
     <div class="hero-preview-text">
@@ -332,7 +313,7 @@
   const MEDALS   = ['🥇','🥈','🥉'];
   const HERO_SRC = 'IMG_3716.png';
 
-  let playerName = '';
+  const playerName = 'プレイヤー';
   let heroImgSrc = null;
   let startTime  = null;
   let rafId      = null;
@@ -524,18 +505,10 @@
 
   /* ── 名前画面 ── */
   document.getElementById('startBtn').addEventListener('click', () => {
-    const v = document.getElementById('nameInput').value.trim();
-    if (!v) { document.getElementById('nameInput').focus(); return; }
-    playerName = v;
-
     initAudio();
-
     const audio = new Audio('start.mp3');
     audio.play().catch(() => {});
     setTimeout(() => startGame(), 3000);
-  });
-  document.getElementById('nameInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('startBtn').click();
   });
 
   /* ── 破裂パーティクル ── */
