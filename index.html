@@ -721,7 +721,7 @@
     const now = Date.now();
     recentKills.push(now);
     recentKills = recentKills.filter(t => now - t <= 500);
-    if      (recentKills.length >= 14) activateFever(2);
+    if      (recentKills.length >= 12) activateFever(2);
     else if (recentKills.length >= 7)  activateFever(1);
   }
 
