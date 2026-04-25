@@ -698,12 +698,15 @@
 
   function activateFever() {
     clearTimeout(feverTimer);
-    if (!feverMode) {
-      feverMode = true;
-      feverCount++;
-      const isLv2 = feverCount >= 2;
-      $game.classList.add('fever');
-      if (isLv2) $game.classList.add('fever-lv2');
+    const wasInFever = feverMode;
+    const wasLv2    = $game.classList.contains('fever-lv2');
+    feverCount++;
+    const isLv2 = feverCount >= 2;
+    feverMode = true;
+    $game.classList.add('fever');
+    if (isLv2) $game.classList.add('fever-lv2');
+    // ラベル表示: 新規覚醒 or Lv1→Lv2昇格
+    if (!wasInFever || (isLv2 && !wasLv2)) {
       const el = document.createElement('div');
       el.className = 'fever-label' + (isLv2 ? ' fever-label-lv2' : '');
       el.textContent = isLv2 ? '⚡ 覚醒Ⅱ ⚡' : '⚡ 覚醒 ⚡';
