@@ -145,6 +145,31 @@
       line-height: 1.4;
     }
 
+    #overwhelmMsg {
+      display: none;
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      text-align: center;
+      pointer-events: none;
+      z-index: 60;
+      background: rgba(0,0,0,0.72);
+      border: 3px solid #ff3300;
+      border-radius: 20px;
+      padding: 28px 36px;
+      width: min(340px, 86vw);
+    }
+    #overwhelmMsg.show { display: block; animation: conquest-in 0.6s ease-out forwards; }
+    #overwhelmMsg.hide { animation: conquest-out 0.5s ease-in forwards; }
+    #overwhelmMsg .ow-title {
+      font-size: 1.1rem; color: #ffd200; font-weight: 700; margin-bottom: 10px; letter-spacing: 0.05em;
+    }
+    #overwhelmMsg .ow-main {
+      font-size: 2.4rem; font-weight: 900; color: #fff;
+      text-shadow: 0 0 20px #ffd200, 0 0 40px #ff8800;
+      line-height: 1.4;
+    }
+
     #dangerOverlay {
       position: absolute;
       inset: 0;
@@ -417,6 +442,10 @@
   <div id="conquestMsg">
     <div class="cq-title">🌍 トキワ帝国</div>
     <div class="cq-main">地球征服<br>完了</div>
+  </div>
+  <div id="overwhelmMsg">
+    <div class="ow-title">🏆 完全制圧</div>
+    <div class="ow-main">圧倒的勝利</div>
   </div>
   <div id="countdown"></div>
   <div class="game-hud">
@@ -692,7 +721,7 @@
     const now = Date.now();
     recentKills.push(now);
     recentKills = recentKills.filter(t => now - t <= 500);
-    if      (recentKills.length >= 10) activateFever(2);
+    if      (recentKills.length >= 14) activateFever(2);
     else if (recentKills.length >= 7)  activateFever(1);
   }
 
@@ -952,6 +981,18 @@ function runCountdown(cb) {
     stopBGM();
     if (!gameWon && score === 0) {
       const msg = document.getElementById('conquestMsg');
+      msg.classList.add('show');
+      setTimeout(() => {
+        msg.classList.remove('show');
+        msg.classList.add('hide');
+        setTimeout(() => { msg.classList.remove('hide'); showResult(); }, 520);
+      }, 2200);
+      return;
+    }
+    const elapsed = startTime ? (Date.now() - startTime) / 1000 : 99;
+    if (gameWon && elapsed < 20) {
+      playClear();
+      const msg = document.getElementById('overwhelmMsg');
       msg.classList.add('show');
       setTimeout(() => {
         msg.classList.remove('show');
