@@ -958,6 +958,14 @@ function runCountdown(cb) {
       document.getElementById('resLabel').textContent = '秒でクリア！';
       const labels = { 1:'🥇 最速記録！', 2:'🥈 2位！', 3:'🥉 3位！' };
       document.getElementById('resRank').textContent  = labels[rank] || `第${rank}位`;
+    } else if (score === 0) {
+      saveScore(false, null, 0);
+      document.getElementById('resLogo').textContent  = '🌍';
+      document.getElementById('resTitle').textContent = 'LOSE';
+      document.getElementById('resTitle').className   = 'result-lose';
+      document.getElementById('resScore').textContent = 'トキワ帝国';
+      document.getElementById('resLabel').textContent = '地球征服完了';
+      document.getElementById('resRank').textContent  = '一体も倒せなかった…';
     } else {
       saveScore(false, null, score);
       document.getElementById('resLogo').textContent  = '💀';
