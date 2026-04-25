@@ -110,6 +110,20 @@
     }
     #clearFlash.flashing { animation: flash 0.4s ease-out forwards; }
 
+    #dangerOverlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(220, 0, 0, 0.28);
+      pointer-events: none;
+      z-index: 8;
+      opacity: 0;
+    }
+    @keyframes danger-flash {
+      0%,100% { opacity: 0; }
+      50%     { opacity: 1; }
+    }
+    #dangerOverlay.active { animation: danger-flash 0.45s ease-in-out infinite; }
+
     .game-hud {
       position: absolute;
       top: 0; left: 0; right: 0;
@@ -317,6 +331,7 @@
 <!-- ② ゲーム -->
 <div class="screen hidden" id="gameScreen">
   <div id="clearFlash"></div>
+  <div id="dangerOverlay"></div>
   <div id="countdown"></div>
   <div class="game-hud">
     <div class="hud-timer" id="hudTimer">29.00</div>
@@ -629,10 +644,16 @@
       if (left <= 5)       { timerEl.classList.remove('orange'); timerEl.classList.add('red'); }
       else if (left <= 15) { timerEl.classList.remove('red');    timerEl.classList.add('orange'); }
       else                 { timerEl.classList.remove('orange','red'); }
-      // 5秒前警告ビープ（1秒に1回）
+      // 5秒前警告：赤点滅オーバーレイ
+      const dangerEl = document.getElementById('dangerOverlay');
       if (left > 0 && left <= 5) {
+        if (!dangerEl.classList.contains('active')) dangerEl.classList.add('active');
         const sec = Math.ceil(left);
-        if (sec !== lastWarnSecond) { lastWarnSecond = sec; playWarnBeep(); }
+        if (sec !== lastWarnSecond) {
+          lastWarnSecond = sec;
+          playWarnBeep();
+          shakeScreen();
+        }
       }
 
       if (left <= 0) {
@@ -655,7 +676,7 @@
 
     const hudH         = $game.querySelector('.game-hud').offsetHeight || 56;
     const topMargin    = 20;
-    const bottomMargin = 110;
+    const bottomMargin = 130;
     const W = window.innerWidth, H = window.innerHeight;
 
     const el = document.createElement('div');
@@ -764,6 +785,7 @@ function runCountdown(cb) {
   /* ── ゲーム開始 ── */
   function startGame() {
     stopBGM();
+    document.getElementById('dangerOverlay').classList.remove('active');
     $game.querySelectorAll('.tap-item,.particle,.float-score').forEach(e => e.remove());
 
     score          = 0;
@@ -796,6 +818,7 @@ function runCountdown(cb) {
 
   /* ── ゲーム終了 ── */
   function endGame() {
+    document.getElementById('dangerOverlay').classList.remove('active');
     fadeBGM();
     const flash = document.getElementById('clearFlash');
     flash.classList.remove('flashing');
