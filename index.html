@@ -323,7 +323,7 @@
 <!-- ① スタート -->
 <div class="screen" id="nameScreen">
   <img src="logo_tokiwa.png" class="title-logo" alt="トキワ帝国の野望">
-  <p class="sub">トキワ兵を29秒以内に全滅させろ！<br>触れるだけで撃破！</p>
+  <p class="sub">トキワ兵を28秒以内に全滅させろ！<br>触れるだけで撃破！</p>
   <button class="btn btn-primary" id="startBtn">ゲームスタート</button>
   <div class="lb-wrap" id="topLb"></div>
 </div>
@@ -334,7 +334,7 @@
   <div id="dangerOverlay"></div>
   <div id="countdown"></div>
   <div class="game-hud">
-    <div class="hud-timer" id="hudTimer">29.00</div>
+    <div class="hud-timer" id="hudTimer">28.00</div>
     <div class="hud-right">
       <div class="hud-score"  id="hudScore">💥 0体撃破</div>
       <div class="hud-remain" id="hudRemain">残り 99体</div>
@@ -366,7 +366,7 @@
   const SIZE              = 90;
   const MEDALS            = ['🥇','🥈','🥉'];
   const HERO_SRCS         = ['IMG_3716.png','IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png'];
-  const GAME_DURATION     = 29;
+  const GAME_DURATION     = 28;
   const TOTAL_ITEMS       = 180;
   const SPAWN_INTERVAL_MS = 190;
   const INITIAL_SPAWN     = 5;
@@ -819,7 +819,7 @@ function runCountdown(cb) {
   /* ── ゲーム終了 ── */
   function endGame() {
     document.getElementById('dangerOverlay').classList.remove('active');
-    fadeBGM();
+    stopBGM();
     const flash = document.getElementById('clearFlash');
     flash.classList.remove('flashing');
     void flash.offsetWidth;
