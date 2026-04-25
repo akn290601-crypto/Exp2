@@ -124,6 +124,33 @@
     }
     #dangerOverlay.active { animation: danger-flash 0.45s ease-in-out infinite; }
 
+    /* ── フィーバー ── */
+    #gameScreen.fever {
+      box-shadow: inset 0 0 0 4px #ffd200, inset 0 0 50px rgba(255,210,0,0.35);
+    }
+    #gameScreen.fever .tap-item:not(.pre-burst):not(.bursting) {
+      zoom: 1.55;
+    }
+    @keyframes fever-pop {
+      0%   { transform: translate(-50%,-50%) scale(2.8); opacity: 0; }
+      18%  { transform: translate(-50%,-50%) scale(1);   opacity: 1; }
+      75%  { transform: translate(-50%,-50%) scale(1);   opacity: 1; }
+      100% { transform: translate(-50%,-50%) scale(0.8); opacity: 0; }
+    }
+    .fever-label {
+      position: absolute;
+      top: 44%;
+      left: 50%;
+      font-size: 3.8rem;
+      font-weight: 900;
+      color: #ffd200;
+      text-shadow: 0 0 20px #ff8800, 0 0 50px #ffd200;
+      pointer-events: none;
+      z-index: 35;
+      white-space: nowrap;
+      animation: fever-pop 1.3s ease-out forwards;
+    }
+
     .game-hud {
       position: absolute;
       top: 0; left: 0; right: 0;
@@ -382,6 +409,9 @@
   let spawnTimerId   = null;
   let startTime      = null;
   let lastWarnSecond = -1;
+  let feverMode      = false;
+  let feverTimer     = null;
+  let recentKills    = [];
 
   const $name   = document.getElementById('nameScreen');
   const $game   = document.getElementById('gameScreen');
@@ -599,6 +629,30 @@
     return { cx, cy };
   }
 
+  function checkFever() {
+    const now = Date.now();
+    recentKills.push(now);
+    recentKills = recentKills.filter(t => now - t <= 500);
+    if (recentKills.length >= 6) activateFever();
+  }
+
+  function activateFever() {
+    clearTimeout(feverTimer);
+    if (!feverMode) {
+      feverMode = true;
+      $game.classList.add('fever');
+      const el = document.createElement('div');
+      el.className = 'fever-label';
+      el.textContent = '🔥 FEVER!';
+      $game.appendChild(el);
+      setTimeout(() => el.remove(), 1350);
+    }
+    feverTimer = setTimeout(() => {
+      feverMode = false;
+      $game.classList.remove('fever');
+    }, 5000);
+  }
+
   function createShatter(el) {
     const imgEl = el.querySelector('img');
     if (!imgEl) return;
@@ -731,6 +785,7 @@
       el.classList.remove('pre-burst');
       el.classList.add('bursting');
       score++;
+      checkFever();
       showFloatScore(cx, cy, score);
       document.getElementById('hudScore').textContent  = `💥 ${score}体撃破`;
       document.getElementById('hudRemain').textContent = `残り ${TOTAL_ITEMS - score}体`;
@@ -796,6 +851,10 @@ function runCountdown(cb) {
     startTime      = null;
     gameEndTime    = null;
     lastWarnSecond = -1;
+    feverMode      = false;
+    recentKills    = [];
+    clearTimeout(feverTimer);
+    $game.classList.remove('fever');
     stopTimer();
     stopSpawn();
 
