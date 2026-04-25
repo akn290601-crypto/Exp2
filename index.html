@@ -470,7 +470,6 @@
   let lastWarnSecond = -1;
   let feverMode      = false;
   let feverTimer     = null;
-  let feverCount     = 0;
   let recentKills    = [];
 
   const $name   = document.getElementById('nameScreen');
@@ -693,15 +692,23 @@
     const now = Date.now();
     recentKills.push(now);
     recentKills = recentKills.filter(t => now - t <= 500);
-    if (recentKills.length >= 7) activateFever();
+    if      (recentKills.length >= 10) activateFever(2);
+    else if (recentKills.length >= 7)  activateFever(1);
   }
 
-  function activateFever() {
+  function activateFever(level) {
     clearTimeout(feverTimer);
     const wasInFever = feverMode;
     const wasLv2    = $game.classList.contains('fever-lv2');
-    feverCount++;
-    const isLv2 = feverCount >= 2;
+    // ダウングレードしない（Lv2中にLv1条件を満たしてもLv2を維持）
+    if (wasLv2 && level < 2) {
+      feverTimer = setTimeout(() => {
+        feverMode = false;
+        $game.classList.remove('fever', 'fever-lv2');
+      }, 5000);
+      return;
+    }
+    const isLv2 = level >= 2;
     feverMode = true;
     $game.classList.add('fever');
     if (isLv2) $game.classList.add('fever-lv2');
@@ -918,7 +925,6 @@ function runCountdown(cb) {
     gameEndTime    = null;
     lastWarnSecond = -1;
     feverMode      = false;
-    feverCount     = 0;
     recentKills    = [];
     clearTimeout(feverTimer);
     $game.classList.remove('fever', 'fever-lv2');
