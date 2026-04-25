@@ -170,6 +170,36 @@
       line-height: 1.4;
     }
 
+    #reconcileMsg {
+      display: none;
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      text-align: center;
+      pointer-events: none;
+      z-index: 60;
+      background: rgba(0,0,0,0.72);
+      border: 3px solid #ff3300;
+      border-radius: 20px;
+      padding: 28px 36px;
+      width: min(340px, 86vw);
+    }
+    #reconcileMsg.show { display: block; animation: conquest-in 0.6s ease-out forwards; }
+    #reconcileMsg.hide { animation: conquest-out 0.5s ease-in forwards; }
+    #reconcileMsg .rc-title {
+      font-size: 1.1rem; color: #00ccff; font-weight: 700; margin-bottom: 10px; letter-spacing: 0.05em;
+    }
+    #reconcileMsg .rc-main {
+      font-size: 2.8rem; font-weight: 900; color: #fff;
+      text-shadow: 0 0 20px #00ccff, 0 0 40px #0088ff;
+      line-height: 1.4;
+    }
+
+    .result-win-win {
+      color: #00eeff;
+      text-shadow: 0 0 20px #00ccff, 0 0 40px #0088ff;
+    }
+
     #dangerOverlay {
       position: absolute;
       inset: 0;
@@ -447,6 +477,10 @@
     <div class="ow-title">🏆 完全制圧</div>
     <div class="ow-main">圧倒的勝利</div>
   </div>
+  <div id="reconcileMsg">
+    <div class="rc-title">🕊️ 和平成立</div>
+    <div class="rc-main">和睦</div>
+  </div>
   <div id="countdown"></div>
   <div class="game-hud">
     <div class="hud-timer" id="hudTimer">28.00</div>
@@ -497,9 +531,11 @@
   let spawnTimerId   = null;
   let startTime      = null;
   let lastWarnSecond = -1;
-  let feverMode      = false;
-  let feverTimer     = null;
-  let recentKills    = [];
+  let feverMode        = false;
+  let feverTimer       = null;
+  let recentKills      = [];
+  let bossConsecutive  = 0;
+  let gameWonReconcile = false;
 
   const $name   = document.getElementById('nameScreen');
   const $game   = document.getElementById('gameScreen');
@@ -847,6 +883,7 @@
       const src = heroImgSrcs[Math.floor(Math.random() * heroImgSrcs.length)];
       if (src === 'IMG_3716.png') itemSize = Math.round(SIZE * 1.28); // 一回り大きく
       else itemSize = Math.round(SIZE * 0.72);                        // 一回り小さく
+      el.dataset.src = src;
       const img = document.createElement('img');
       img.src = src; img.draggable = false;
       el.appendChild(img);
@@ -888,6 +925,14 @@
       el.classList.add('bursting');
       score++;
       checkFever();
+      // 和睦チェック（IMG_3716を5回連続）
+      if (el.dataset.src === 'IMG_3716.png') { bossConsecutive++; } else { bossConsecutive = 0; }
+      if (bossConsecutive >= 5) {
+        gameWonReconcile = true; gameWon = true; gameOver = true;
+        stopSpawn(); stopTimer();
+        setTimeout(() => { el.remove(); endGame(); }, 430);
+        return;
+      }
       showFloatScore(cx, cy, score);
       document.getElementById('hudScore').textContent  = `💥 ${score}体撃破`;
       document.getElementById('hudRemain').textContent = `残り ${TOTAL_ITEMS - score}体`;
@@ -951,8 +996,10 @@ function runCountdown(cb) {
     startTime      = null;
     gameEndTime    = null;
     lastWarnSecond = -1;
-    feverMode      = false;
-    recentKills    = [];
+    feverMode        = false;
+    recentKills      = [];
+    bossConsecutive  = 0;
+    gameWonReconcile = false;
     clearTimeout(feverTimer);
     $game.classList.remove('fever', 'fever-lv2');
     stopTimer();
@@ -979,6 +1026,17 @@ function runCountdown(cb) {
   function endGame() {
     document.getElementById('dangerOverlay').classList.remove('active');
     stopBGM();
+    if (gameWonReconcile) {
+      playClear();
+      const msg = document.getElementById('reconcileMsg');
+      msg.classList.add('show');
+      setTimeout(() => {
+        msg.classList.remove('show');
+        msg.classList.add('hide');
+        setTimeout(() => { msg.classList.remove('hide'); showResult(); }, 520);
+      }, 2200);
+      return;
+    }
     if (!gameWon && score === 0) {
       const msg = document.getElementById('conquestMsg');
       msg.classList.add('show');
@@ -1045,6 +1103,18 @@ function runCountdown(cb) {
   /* ── リザルト ── */
   function showResult() {
     const elapsed = (Date.now() - startTime) / 1000;
+    if (gameWonReconcile) {
+      saveScore(true, elapsed, score);
+      document.getElementById('resLogo').textContent  = '🕊️';
+      document.getElementById('resTitle').textContent = 'WIN WIN';
+      document.getElementById('resTitle').className   = 'result-win-win';
+      document.getElementById('resScore').textContent = score;
+      document.getElementById('resLabel').textContent = '体撃破で和睦成立';
+      document.getElementById('resRank').textContent  = '双方に名誉ある和解！';
+      renderLb('resLb');
+      showScreen($result);
+      return;
+    }
     if (gameWon) {
       const rank = wonRankOf(elapsed);
       saveScore(true, elapsed, score);
