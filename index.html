@@ -499,6 +499,7 @@
   <div class="result-label" id="resLabel"></div>
   <div class="result-rank"  id="resRank"></div>
   <div class="lb-wrap" id="resLb"></div>
+  <div class="lb-wrap" id="resEndingHistory"></div>
   <div class="btn-row">
     <button class="btn btn-secondary" id="backBtn">トップへ</button>
     <button class="btn btn-primary"   id="retryBtn">もう一度</button>
@@ -536,6 +537,7 @@
   let recentKills      = [];
   let bossConsecutive  = 0;
   let gameWonReconcile = false;
+  let gameEndType      = '';
 
   const $name   = document.getElementById('nameScreen');
   const $game   = document.getElementById('gameScreen');
@@ -1000,6 +1002,7 @@ function runCountdown(cb) {
     recentKills      = [];
     bossConsecutive  = 0;
     gameWonReconcile = false;
+    gameEndType      = '';
     clearTimeout(feverTimer);
     $game.classList.remove('fever', 'fever-lv2');
     stopTimer();
@@ -1027,6 +1030,7 @@ function runCountdown(cb) {
     document.getElementById('dangerOverlay').classList.remove('active');
     stopBGM();
     if (gameWonReconcile) {
+      gameEndType = 'reconcile';
       playClear();
       const msg = document.getElementById('reconcileMsg');
       msg.classList.add('show');
@@ -1038,6 +1042,7 @@ function runCountdown(cb) {
       return;
     }
     if (!gameWon && score === 0) {
+      gameEndType = 'conquest';
       const msg = document.getElementById('conquestMsg');
       msg.classList.add('show');
       setTimeout(() => {
@@ -1049,6 +1054,7 @@ function runCountdown(cb) {
     }
     const elapsed = startTime ? (Date.now() - startTime) / 1000 : 99;
     if (gameWon && elapsed < 20) {
+      gameEndType = 'overwhelm';
       playClear();
       const msg = document.getElementById('overwhelmMsg');
       msg.classList.add('show');
@@ -1059,6 +1065,7 @@ function runCountdown(cb) {
       }, 2200);
       return;
     }
+    gameEndType = gameWon ? 'win' : 'lose';
     const flash = document.getElementById('clearFlash');
     flash.classList.remove('flashing');
     void flash.offsetWidth;
@@ -1100,9 +1107,38 @@ function runCountdown(cb) {
        </div>`;
   }
 
+  /* ── エンディング履歴 ── */
+  const ENDING_DEFS = [
+    { key: 'reconcile', icon: '🕊️', label: '和睦'           },
+    { key: 'overwhelm', icon: '🏆', label: '圧倒的勝利'     },
+    { key: 'win',       icon: '🎉', label: '通常勝利'        },
+    { key: 'lose',      icon: '💀', label: '通常敗北'        },
+    { key: 'conquest',  icon: '🌍', label: '地球征服完了'   },
+  ];
+  function loadEndings() {
+    try { return JSON.parse(localStorage.getItem('tg_endings') || '{}'); } catch { return {}; }
+  }
+  function saveEnding(type) {
+    const e = loadEndings(); e[type] = (e[type] || 0) + 1;
+    localStorage.setItem('tg_endings', JSON.stringify(e));
+  }
+  function renderEndingHistory(id) {
+    const e = loadEndings();
+    document.getElementById(id).innerHTML =
+      '<div class="lb-title">📋 エンディング履歴</div>' +
+      ENDING_DEFS.map(p =>
+        `<div class="lb-row">
+           <span class="lb-medal">${p.icon}</span>
+           <span class="lb-name">${p.label}</span>
+           <span class="lb-score">${e[p.key] || 0}回</span>
+         </div>`
+      ).join('');
+  }
+
   /* ── リザルト ── */
   function showResult() {
     const elapsed = (Date.now() - startTime) / 1000;
+    saveEnding(gameEndType);
     if (gameWonReconcile) {
       saveScore(true, elapsed, score);
       document.getElementById('resLogo').textContent  = '🕊️';
@@ -1111,11 +1147,7 @@ function runCountdown(cb) {
       document.getElementById('resScore').textContent = score;
       document.getElementById('resLabel').textContent = '体撃破で和睦成立';
       document.getElementById('resRank').textContent  = '双方に名誉ある和解！';
-      renderLb('resLb');
-      showScreen($result);
-      return;
-    }
-    if (gameWon) {
+    } else if (gameWon) {
       const rank = wonRankOf(elapsed);
       saveScore(true, elapsed, score);
       document.getElementById('resLogo').textContent  = '🎉';
@@ -1136,6 +1168,7 @@ function runCountdown(cb) {
       document.getElementById('resRank').textContent  = msg;
     }
     renderLb('resLb');
+    renderEndingHistory('resEndingHistory');
     showScreen($result);
   }
 
