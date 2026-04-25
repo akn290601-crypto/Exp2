@@ -110,6 +110,41 @@
     }
     #clearFlash.flashing { animation: flash 0.4s ease-out forwards; }
 
+    @keyframes conquest-in {
+      0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.6); }
+      40%  { opacity: 1; transform: translate(-50%,-50%) scale(1.08); }
+      65%  { transform: translate(-50%,-50%) scale(0.97); }
+      100% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+    }
+    @keyframes conquest-out {
+      0%   { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    #conquestMsg {
+      display: none;
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      text-align: center;
+      pointer-events: none;
+      z-index: 60;
+      background: rgba(0,0,0,0.72);
+      border: 3px solid #ff3300;
+      border-radius: 20px;
+      padding: 28px 36px;
+      width: min(340px, 86vw);
+    }
+    #conquestMsg.show { display: block; animation: conquest-in 0.6s ease-out forwards; }
+    #conquestMsg.hide { animation: conquest-out 0.5s ease-in forwards; }
+    #conquestMsg .cq-title {
+      font-size: 1.1rem; color: #ff5500; font-weight: 700; margin-bottom: 10px; letter-spacing: 0.05em;
+    }
+    #conquestMsg .cq-main {
+      font-size: 2rem; font-weight: 900; color: #fff;
+      text-shadow: 0 0 20px #ff3300, 0 0 40px #ff0000;
+      line-height: 1.4;
+    }
+
     #dangerOverlay {
       position: absolute;
       inset: 0;
@@ -379,6 +414,10 @@
 <div class="screen hidden" id="gameScreen">
   <div id="clearFlash"></div>
   <div id="dangerOverlay"></div>
+  <div id="conquestMsg">
+    <div class="cq-title">🌍 トキワ帝国</div>
+    <div class="cq-main">地球征服<br>完了</div>
+  </div>
   <div id="countdown"></div>
   <div class="game-hud">
     <div class="hud-timer" id="hudTimer">28.00</div>
@@ -904,6 +943,16 @@ function runCountdown(cb) {
   function endGame() {
     document.getElementById('dangerOverlay').classList.remove('active');
     stopBGM();
+    if (!gameWon && score === 0) {
+      const msg = document.getElementById('conquestMsg');
+      msg.classList.add('show');
+      setTimeout(() => {
+        msg.classList.remove('show');
+        msg.classList.add('hide');
+        setTimeout(() => { msg.classList.remove('hide'); showResult(); }, 520);
+      }, 2200);
+      return;
+    }
     const flash = document.getElementById('clearFlash');
     flash.classList.remove('flashing');
     void flash.offsetWidth;
@@ -958,14 +1007,6 @@ function runCountdown(cb) {
       document.getElementById('resLabel').textContent = '秒でクリア！';
       const labels = { 1:'🥇 最速記録！', 2:'🥈 2位！', 3:'🥉 3位！' };
       document.getElementById('resRank').textContent  = labels[rank] || `第${rank}位`;
-    } else if (score === 0) {
-      saveScore(false, null, 0);
-      document.getElementById('resLogo').textContent  = '🌍';
-      document.getElementById('resTitle').textContent = 'LOSE';
-      document.getElementById('resTitle').className   = 'result-lose';
-      document.getElementById('resScore').textContent = 'トキワ帝国';
-      document.getElementById('resLabel').textContent = '地球征服完了';
-      document.getElementById('resRank').textContent  = '一体も倒せなかった…';
     } else {
       saveScore(false, null, score);
       document.getElementById('resLogo').textContent  = '💀';
