@@ -309,7 +309,7 @@
 <!-- ① スタート -->
 <div class="screen" id="nameScreen">
   <img src="logo_tokiwa.png" class="title-logo" alt="トキワ帝国の野望">
-  <p class="sub">トキワ兵を30秒以内に全滅させろ！<br>触れるだけで撃破！</p>
+  <p class="sub">トキワ兵を25秒以内に全滅させろ！<br>触れるだけで撃破！</p>
   <button class="btn btn-primary" id="startBtn">ゲームスタート</button>
   <div class="lb-wrap" id="topLb"></div>
 </div>
@@ -319,7 +319,7 @@
   <div id="clearFlash"></div>
   <div id="countdown"></div>
   <div class="game-hud">
-    <div class="hud-timer" id="hudTimer">30.00</div>
+    <div class="hud-timer" id="hudTimer">25.00</div>
     <div class="hud-right">
       <div class="hud-score"  id="hudScore">💥 0体撃破</div>
       <div class="hud-remain" id="hudRemain">残り 99体</div>
@@ -351,21 +351,22 @@
   const SIZE              = 90;
   const MEDALS            = ['🥇','🥈','🥉'];
   const HERO_SRCS         = ['IMG_3716.png','IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png'];
-  const GAME_DURATION     = 30;
+  const GAME_DURATION     = 25;
   const TOTAL_ITEMS       = 180;
   const SPAWN_INTERVAL_MS = 190;
   const INITIAL_SPAWN     = 5;
 
-  let heroImgSrcs  = [];
-  let score        = 0;
-  let gameEndTime  = null;
-  let rafId        = null;
-  let gameOver     = false;
-  let gameWon      = false;
-  let itemIndex    = 0;
-  let totalSpawned = 0;
-  let spawnTimerId  = null;
-  let startTime     = null;
+  let heroImgSrcs    = [];
+  let score          = 0;
+  let gameEndTime    = null;
+  let rafId          = null;
+  let gameOver       = false;
+  let gameWon        = false;
+  let itemIndex      = 0;
+  let totalSpawned   = 0;
+  let spawnTimerId   = null;
+  let startTime      = null;
+  let lastWarnSecond = -1;
 
   const $name   = document.getElementById('nameScreen');
   const $game   = document.getElementById('gameScreen');
@@ -382,7 +383,12 @@
   let bgmFadeTimer = null;
 
   function unlockBGM() {
-    bgmAudio.play().then(() => bgmAudio.pause()).catch(() => {});
+    bgmAudio.muted = true;
+    bgmAudio.play().then(() => {
+      bgmAudio.pause();
+      bgmAudio.muted = false;
+      bgmAudio.currentTime = 0;
+    }).catch(() => { bgmAudio.muted = false; });
   }
   function startBGM() {
     clearInterval(bgmFadeTimer);
@@ -478,6 +484,43 @@
         g2.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
         osc2.start(t + 0.05); osc2.stop(t + 0.2);
       }
+    } catch (_) {}
+  }
+
+  function playCountdownBeep(isGo) {
+    try {
+      const ctx = getCtx(); if (!ctx) return;
+      const t = ctx.currentTime;
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      if (isGo) {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(880, t);
+        osc.frequency.exponentialRampToValueAtTime(1320, t + 0.18);
+        gain.gain.setValueAtTime(0.45, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+        osc.start(t); osc.stop(t + 0.28);
+      } else {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520, t);
+        gain.gain.setValueAtTime(0.38, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
+        osc.start(t); osc.stop(t + 0.13);
+      }
+    } catch (_) {}
+  }
+
+  function playWarnBeep() {
+    try {
+      const ctx = getCtx(); if (!ctx) return;
+      const t = ctx.currentTime;
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(660, t);
+      gain.gain.setValueAtTime(0.22, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+      osc.start(t); osc.stop(t + 0.09);
     } catch (_) {}
   }
 
@@ -580,9 +623,14 @@
       const timerEl = document.getElementById('hudTimer');
       timerEl.textContent = left.toFixed(2);
       // 残り時間で色変化
-      if (left <= 10)      { timerEl.classList.remove('orange'); timerEl.classList.add('red'); }
-      else if (left <= 20) { timerEl.classList.remove('red');    timerEl.classList.add('orange'); }
+      if (left <= 5)       { timerEl.classList.remove('orange'); timerEl.classList.add('red'); }
+      else if (left <= 15) { timerEl.classList.remove('red');    timerEl.classList.add('orange'); }
       else                 { timerEl.classList.remove('orange','red'); }
+      // 5秒前警告ビープ（1秒に1回）
+      if (left > 0 && left <= 5) {
+        const sec = Math.ceil(left);
+        if (sec !== lastWarnSecond) { lastWarnSecond = sec; playWarnBeep(); }
+      }
 
       if (left <= 0) {
         gameOver = true;
@@ -694,10 +742,12 @@ function runCountdown(cb) {
     function next() {
       el.innerHTML = '';
       if (i >= steps.length) { cb(); return; }
+      const step = steps[i++];
       const num = document.createElement('div');
-      num.className = 'cd-num' + (steps[i] === 'GO!' ? ' cd-go' : '');
-      num.textContent = steps[i++];
+      num.className = 'cd-num' + (step === 'GO!' ? ' cd-go' : '');
+      num.textContent = step;
       el.appendChild(num);
+      playCountdownBeep(step === 'GO!');
       setTimeout(next, 850);
     }
     next();
@@ -713,13 +763,14 @@ function runCountdown(cb) {
     stopBGM();
     $game.querySelectorAll('.tap-item,.particle,.float-score').forEach(e => e.remove());
 
-    score         = 0;
-    gameOver      = false;
-    gameWon       = false;
-    itemIndex     = 0;
-    totalSpawned  = 0;
-    startTime    = null;
-    gameEndTime  = null;
+    score          = 0;
+    gameOver       = false;
+    gameWon        = false;
+    itemIndex      = 0;
+    totalSpawned   = 0;
+    startTime      = null;
+    gameEndTime    = null;
+    lastWarnSecond = -1;
     stopTimer();
     stopSpawn();
 
@@ -815,9 +866,7 @@ function runCountdown(cb) {
   document.getElementById('startBtn').addEventListener('click', () => {
     initAudio();
     unlockBGM();
-    const audio = new Audio('start.mp3');
-    audio.play().catch(() => {});
-    setTimeout(() => startGame(), 1000);
+    startGame();
   });
   document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); startGame(); });
   // ゲーム画面タップのたびにAudioContext再開（iOS対策）
