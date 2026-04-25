@@ -124,7 +124,7 @@
     }
     #dangerOverlay.active { animation: danger-flash 0.45s ease-in-out infinite; }
 
-    /* ── フィーバー ── */
+    /* ── 覚醒Lv1 ── */
     #gameScreen.fever {
       box-shadow: inset 0 0 0 4px #ffd200, inset 0 0 50px rgba(255,210,0,0.35);
     }
@@ -136,6 +136,20 @@
       position: absolute;
       inset: -24px;
       z-index: 2;
+    }
+    /* ── 覚醒Lv2 ── */
+    #gameScreen.fever-lv2 {
+      box-shadow: inset 0 0 0 5px #ff6600, inset 0 0 60px rgba(255,80,0,0.45);
+    }
+    #gameScreen.fever-lv2 .tap-item:not(.pre-burst):not(.bursting):not(.spawning) {
+      box-shadow: 0 0 28px 14px rgba(255,80,0,0.8);
+    }
+    #gameScreen.fever-lv2 .tap-item:not(.pre-burst):not(.bursting):not(.spawning)::after {
+      inset: -46px;
+    }
+    .fever-label-lv2 {
+      color: #ff5500 !important;
+      text-shadow: 0 0 20px #ff2200, 0 0 50px #ff6600 !important;
     }
     @keyframes fever-pop {
       0%   { transform: translate(-50%,-50%) scale(2.8); opacity: 0; }
@@ -417,6 +431,7 @@
   let lastWarnSecond = -1;
   let feverMode      = false;
   let feverTimer     = null;
+  let feverCount     = 0;
   let recentKills    = [];
 
   const $name   = document.getElementById('nameScreen');
@@ -639,23 +654,26 @@
     const now = Date.now();
     recentKills.push(now);
     recentKills = recentKills.filter(t => now - t <= 500);
-    if (recentKills.length >= 6) activateFever();
+    if (recentKills.length >= 7) activateFever();
   }
 
   function activateFever() {
     clearTimeout(feverTimer);
     if (!feverMode) {
       feverMode = true;
+      feverCount++;
+      const isLv2 = feverCount >= 2;
       $game.classList.add('fever');
+      if (isLv2) $game.classList.add('fever-lv2');
       const el = document.createElement('div');
-      el.className = 'fever-label';
-      el.textContent = '⚡ 覚醒 ⚡';
+      el.className = 'fever-label' + (isLv2 ? ' fever-label-lv2' : '');
+      el.textContent = isLv2 ? '⚡ 覚醒Ⅱ ⚡' : '⚡ 覚醒 ⚡';
       $game.appendChild(el);
       setTimeout(() => el.remove(), 1350);
     }
     feverTimer = setTimeout(() => {
       feverMode = false;
-      $game.classList.remove('fever');
+      $game.classList.remove('fever', 'fever-lv2');
     }, 5000);
   }
 
@@ -858,9 +876,10 @@ function runCountdown(cb) {
     gameEndTime    = null;
     lastWarnSecond = -1;
     feverMode      = false;
+    feverCount     = 0;
     recentKills    = [];
     clearTimeout(feverTimer);
-    $game.classList.remove('fever');
+    $game.classList.remove('fever', 'fever-lv2');
     stopTimer();
     stopSpawn();
 
