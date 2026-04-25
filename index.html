@@ -873,10 +873,8 @@
   }
 
   function getSpawnInterval() {
-    if (score >= 80) return 80;
-    if (score >= 60) return 120;
-    if (score >= 30) return 155;
-    return SPAWN_INTERVAL_MS;
+    const base = score >= 80 ? 80 : score >= 60 ? 120 : score >= 30 ? 155 : SPAWN_INTERVAL_MS;
+    return $game.classList.contains('fever-lv2') ? Math.round(base * 0.72) : base;
   }
 
   function spawnLoop() {
