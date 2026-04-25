@@ -463,6 +463,7 @@
   <p class="sub">トキワ兵を28秒以内に全滅させろ！<br>触れるだけで撃破！</p>
   <button class="btn btn-primary" id="startBtn">ゲームスタート</button>
   <div class="lb-wrap" id="topLb"></div>
+  <div class="lb-wrap" id="topEndingHistory"></div>
 </div>
 
 <!-- ② ゲーム -->
@@ -1113,7 +1114,7 @@ function runCountdown(cb) {
     { key: 'overwhelm', icon: '🏆', label: '圧倒的勝利'     },
     { key: 'win',       icon: '🎉', label: '通常勝利'        },
     { key: 'lose',      icon: '💀', label: '通常敗北'        },
-    { key: 'conquest',  icon: '🌍', label: '地球征服完了'   },
+    { key: 'conquest',  icon: '🌍', label: '圧倒的トキワ'  },
   ];
   function loadEndings() {
     try { return JSON.parse(localStorage.getItem('tg_endings') || '{}'); } catch { return {}; }
@@ -1183,12 +1184,14 @@ function runCountdown(cb) {
   document.getElementById('gameScreen').addEventListener('pointerdown', () => initAudio(), { capture: true });
   document.getElementById('backBtn').addEventListener('click', () => {
     renderLb('topLb');
+    renderEndingHistory('topEndingHistory');
     showScreen($name);
   });
 
   /* ── 起動時 ── */
   (async () => {
     renderLb('topLb');
+    renderEndingHistory('topEndingHistory');
     heroImgSrcs = (await Promise.all(
       HERO_SRCS.map(src => new Promise(resolve => {
         const img = new Image();
