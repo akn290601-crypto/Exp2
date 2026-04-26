@@ -538,9 +538,12 @@
   let feverMode        = false;
   let feverTimer       = null;
   let recentKills      = [];
-  let bossConsecutive  = 0;
-  let gameWonReconcile = false;
-  let gameEndType      = '';
+  let bossConsecutive      = 0;
+  let gameWonReconcile     = false;
+  let gameEndType          = '';
+  let speedBoostCount      = 0;
+  let speedBoostNextThresh = 5;
+  let recentKillsSpeed     = [];
 
   const $name   = document.getElementById('nameScreen');
   const $game   = document.getElementById('gameScreen');
@@ -766,6 +769,16 @@
     else if (recentKills.length >= 7)  activateFever(1);
   }
 
+  function checkSpeedBoost() {
+    const now = Date.now();
+    recentKillsSpeed.push(now);
+    recentKillsSpeed = recentKillsSpeed.filter(t => now - t <= 1000);
+    if (recentKillsSpeed.length >= speedBoostNextThresh) {
+      speedBoostCount++;
+      speedBoostNextThresh += 5;
+    }
+  }
+
   function activateFever(level) {
     clearTimeout(feverTimer);
     const wasInFever = feverMode;
@@ -930,6 +943,7 @@
       el.classList.add('bursting');
       score++;
       checkFever();
+      checkSpeedBoost();
       // 和睦チェック（IMG_3716を5回連続）
       if (el.dataset.src === 'IMG_3716.png') { bossConsecutive++; } else { bossConsecutive = 0; }
       if (bossConsecutive >= 5) {
@@ -953,7 +967,9 @@
 
   function getSpawnInterval() {
     const base = score >= 80 ? 80 : score >= 60 ? 120 : score >= 30 ? 155 : SPAWN_INTERVAL_MS;
-    return $game.classList.contains('fever-lv2') ? Math.round(base * 0.72) : base;
+    let mult = Math.max(0.45, Math.pow(0.88, speedBoostCount));
+    if ($game.classList.contains('fever-lv2')) mult *= 0.72;
+    return Math.max(45, Math.round(base * mult));
   }
 
   function spawnLoop() {
@@ -1003,9 +1019,12 @@ function runCountdown(cb) {
     lastWarnSecond = -1;
     feverMode        = false;
     recentKills      = [];
-    bossConsecutive  = 0;
-    gameWonReconcile = false;
-    gameEndType      = '';
+    bossConsecutive      = 0;
+    gameWonReconcile     = false;
+    gameEndType          = '';
+    speedBoostCount      = 0;
+    speedBoostNextThresh = 5;
+    recentKillsSpeed     = [];
     clearTimeout(feverTimer);
     $game.classList.remove('fever', 'fever-lv2');
     stopTimer();
