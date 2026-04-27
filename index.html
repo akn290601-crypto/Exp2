@@ -666,14 +666,14 @@
   const MEDALS            = ['🥇','🥈','🥉'];
   const HERO_SRCS         = ['IMG_3716.png','IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png'];
   const SPAWN_INTERVAL_MS = 190;
-  const INITIAL_SPAWN     = 5;
+  const INITIAL_SPAWN     = 3;
   const STAGE_CONFIGS = [
-    { num: 1, label: 'STAGE 1', quota: 15, duration: 20, spawnLimit: 35,
-      srcs: ['IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png'], vyMin: 0.8, vyMax: 1.4 },
-    { num: 2, label: 'STAGE 2', quota: 20, duration: 24, spawnLimit: 45,
-      srcs: ['IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png','IMG_3716.png'], vyMin: 1.3, vyMax: 2.0 },
-    { num: 3, label: 'STAGE 3', quota: 25, duration: 28, spawnLimit: 55,
-      srcs: ['IMG_3755.png','IMG_3756.png','IMG_3716.png','IMG_3716.png'], vyMin: 2.0, vyMax: 3.0 },
+    { num: 1, label: 'STAGE 1', quota: 15, duration: 20, spawnLimit: 15,
+      srcs: ['IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png'], vyMin: 0.5, vyMax: 0.9 },
+    { num: 2, label: 'STAGE 2', quota: 20, duration: 24, spawnLimit: 20,
+      srcs: ['IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png','IMG_3716.png'], vyMin: 0.8, vyMax: 1.3 },
+    { num: 3, label: 'STAGE 3', quota: 25, duration: 28, spawnLimit: 25,
+      srcs: ['IMG_3755.png','IMG_3756.png','IMG_3716.png','IMG_3716.png'], vyMin: 1.2, vyMax: 1.8 },
   ];
 
   let heroImgSrcs    = [];
@@ -1034,6 +1034,8 @@
   }
 
   function updateEnemies() {
+    const hudH      = ($game.querySelector('.game-hud') || {}).offsetHeight || 56;
+    const bottomLim = window.innerHeight - 80;
     for (let i = enemies.length - 1; i >= 0; i--) {
       const e = enemies[i];
       if (!e.el.isConnected || e.el.classList.contains('bursting') || e.el.classList.contains('pre-burst')) {
@@ -1042,9 +1044,16 @@
       e.x += e.vx;
       e.x = Math.max(0, Math.min(window.innerWidth - e.size, e.x));
       e.y += e.vy;
+      // 画面下端でバウンス（敵が逃げない）
+      if (e.y + e.size > bottomLim) {
+        e.y = bottomLim - e.size;
+        e.vy = -Math.abs(e.vy) * 0.75;
+        e.vx += (Math.random() - 0.5) * 0.6;
+      }
+      // 上端はHUDより下に留める
+      if (e.y < hudH) { e.y = hudH; e.vy = Math.abs(e.vy); }
       e.el.style.left = e.x + 'px';
       e.el.style.top  = e.y + 'px';
-      if (e.y > window.innerHeight + 20) { e.el.remove(); enemies.splice(i, 1); }
     }
   }
 
@@ -1335,7 +1344,9 @@
       if (score >= cfg.quota) {
         gameWon = true; gameOver = true;
         stopSpawn(); stopTimer();
-        setTimeout(() => { el.remove(); endGame(); }, 430);
+        // 残り敵を即時消去
+        enemies.forEach(e => { if (e.el.isConnected) e.el.remove(); }); enemies = [];
+        setTimeout(() => { if (el.isConnected) el.remove(); endGame(); }, 430);
         return;
       }
       setTimeout(() => el.remove(), 430);
@@ -1444,10 +1455,13 @@ function runCountdown(cb) {
 
   /* ── ゲーム終了 ── */
   function endGame() {
+    stopTimer();
     clearTimeout(fireTimer); clearTimeout(powerSpawnTimer); clearTimeout(powerUpTimer);
     fireTimer = null; powerSpawnTimer = null;
     bullets.forEach(b => b.el.remove()); bullets = [];
+    enemies.forEach(e => { if (e.el.isConnected) e.el.remove(); }); enemies = [];
     powerItems.forEach(p => { if (p.el.isConnected) p.el.remove(); }); powerItems = [];
+    $game.querySelectorAll('.tap-item,.particle').forEach(e => e.remove());
     document.getElementById('dangerOverlay').classList.remove('active');
     stopBGM();
 
