@@ -536,6 +536,41 @@
     .result-label { font-size: 1.1rem; color: #aaa; margin-bottom: 4px; }
     .result-rank  { font-size: 1rem;   color: #aaa; margin-bottom: 20px; }
     .btn-row { display: flex; gap: 12px; margin-top: 20px; }
+
+    /* ── Story screen ── */
+    #storyScreen {
+      background: #000;
+      overflow: hidden;
+      justify-content: center;
+    }
+    #storyContent {
+      position: absolute;
+      width: 90%;
+      left: 5%;
+      text-align: center;
+      line-height: 3.2;
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: #ffd200;
+      text-shadow: 0 0 16px rgba(255,210,0,0.7);
+      animation: story-scroll 13s linear forwards;
+    }
+    @keyframes story-scroll {
+      0%   { top: 110vh; }
+      100% { top: -260px; }
+    }
+    #storySkipBtn {
+      position: absolute;
+      bottom: max(40px, env(safe-area-inset-bottom) + 20px);
+    }
+
+    /* ── Stage result screen ── */
+    #stageResultScreen {
+      background: radial-gradient(ellipse at center, #0a1a3a 0%, #050d1e 100%);
+    }
+    .stg-num  { font-size: 1rem; color: #00ccff; letter-spacing: 0.2em; margin-bottom: 6px; }
+    .stg-res  { font-size: 3rem; font-weight: 900; margin: 8px 0; }
+    .stg-detail { font-size: 1rem; color: #aaa; margin-bottom: 4px; }
   </style>
 </head>
 <body>
@@ -592,6 +627,34 @@
   </div>
 </div>
 
+<!-- ④ ストーリー -->
+<div class="screen hidden" id="storyScreen">
+  <div id="storyContent">
+    <p>時は西暦まるまる年、</p>
+    <p>地球はトキワ帝国の</p>
+    <p>侵攻の危機に瀕していた。</p>
+    <p>&nbsp;</p>
+    <p>そんな時</p>
+    <p>救世主が現れた</p>
+    <p>&nbsp;</p>
+    <p>パラレル世界の</p>
+    <p>トキワである。</p>
+  </div>
+  <button class="btn btn-secondary" id="storySkipBtn">スキップ ▶</button>
+</div>
+
+<!-- ⑤ ステージリザルト -->
+<div class="screen hidden" id="stageResultScreen">
+  <div class="stg-num" id="stgResNum"></div>
+  <h1 class="stg-res" id="stgResTitle"></h1>
+  <div class="result-score" id="stgResScore"></div>
+  <div class="stg-detail" id="stgResDetail"></div>
+  <div class="stg-detail" id="stgResTime"></div>
+  <div class="btn-row" style="margin-top:36px;">
+    <button class="btn btn-primary" id="nextStageBtn">STAGE <span id="nextStageNum">2</span> へ ▶</button>
+  </div>
+</div>
+
 <audio id="bgm" src="ms.mp3" preload="auto"></audio>
 
 <script>
@@ -602,14 +665,15 @@
   const SIZE              = 90;
   const MEDALS            = ['🥇','🥈','🥉'];
   const HERO_SRCS         = ['IMG_3716.png','IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png'];
-  const GAME_DURATION     = 28;
-  const TOTAL_ITEMS       = 60;
   const SPAWN_INTERVAL_MS = 190;
   const INITIAL_SPAWN     = 5;
-  const STAGE_DEFS = [
-    { minKills:  0, srcs: ['IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png'], vyMin: 0.8, vyMax: 1.4 },
-    { minKills: 15, srcs: ['IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png','IMG_3716.png'], vyMin: 1.3, vyMax: 2.0 },
-    { minKills: 35, srcs: ['IMG_3755.png','IMG_3756.png','IMG_3716.png','IMG_3716.png'], vyMin: 2.0, vyMax: 3.0 },
+  const STAGE_CONFIGS = [
+    { num: 1, label: 'STAGE 1', quota: 15, duration: 20, spawnLimit: 35,
+      srcs: ['IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png'], vyMin: 0.8, vyMax: 1.4 },
+    { num: 2, label: 'STAGE 2', quota: 20, duration: 24, spawnLimit: 45,
+      srcs: ['IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png','IMG_3716.png'], vyMin: 1.3, vyMax: 2.0 },
+    { num: 3, label: 'STAGE 3', quota: 25, duration: 28, spawnLimit: 55,
+      srcs: ['IMG_3755.png','IMG_3756.png','IMG_3716.png','IMG_3716.png'], vyMin: 2.0, vyMax: 3.0 },
   ];
 
   let heroImgSrcs    = [];
@@ -636,19 +700,23 @@
   let bullets   = [];
   let enemies   = [];
   let fireTimer = null;
-  let currentStage  = 1;
+  let currentStageNum = 1;
+  let totalScore      = 0;
+  let totalElapsed    = 0;
   let powerUpActive = false;
   let powerUpType   = null;
   let powerUpTimer  = null;
   let powerItems    = [];
   let powerSpawnTimer = null;
 
-  const $name   = document.getElementById('nameScreen');
-  const $game   = document.getElementById('gameScreen');
-  const $result = document.getElementById('resultScreen');
+  const $name       = document.getElementById('nameScreen');
+  const $game       = document.getElementById('gameScreen');
+  const $result     = document.getElementById('resultScreen');
+  const $story      = document.getElementById('storyScreen');
+  const $stageResult= document.getElementById('stageResultScreen');
 
   function showScreen(el) {
-    [$name, $game, $result].forEach(s => s.classList.add('hidden'));
+    [$name, $game, $result, $story, $stageResult].forEach(s => s.classList.add('hidden'));
     el.classList.remove('hidden');
   }
 
@@ -999,13 +1067,6 @@
   }
 
   /* ── Stage system ── */
-  function getStageIndex() {
-    let idx = 0;
-    for (let i = 0; i < STAGE_DEFS.length; i++) {
-      if (score >= STAGE_DEFS[i].minKills) idx = i;
-    }
-    return idx;
-  }
   function showStageLabel(text) {
     const el = document.createElement('div');
     el.className = 'stage-label';
@@ -1027,17 +1088,6 @@
       });
     } catch (_) {}
   }
-  function checkStage() {
-    const idx = getStageIndex();
-    const newStage = idx + 1;
-    if (newStage !== currentStage) {
-      currentStage = newStage;
-      showStageLabel(`STAGE ${currentStage}`);
-      playStageUp();
-      shakeScreen();
-    }
-  }
-
   /* ── Power-up items ── */
   function spawnPowerUp() {
     if (gameOver) return;
@@ -1204,7 +1254,8 @@
 
   /* ── アイテム生成 ── */
   function spawnItem() {
-    if (gameOver || totalSpawned >= TOTAL_ITEMS) return;
+    const cfg = STAGE_CONFIGS[currentStageNum - 1];
+    if (gameOver || totalSpawned >= cfg.spawnLimit) return;
     totalSpawned++;
 
     const hudH = $game.querySelector('.game-hud').offsetHeight || 56;
@@ -1220,8 +1271,7 @@
     let itemSize = SIZE;
     let vy;
     if (heroImgSrcs.length > 0) {
-      const stageDef = STAGE_DEFS[getStageIndex()];
-      const pool = heroImgSrcs.filter(s => stageDef.srcs.includes(s));
+      const pool = heroImgSrcs.filter(s => cfg.srcs.includes(s));
       const src  = (pool.length > 0 ? pool : heroImgSrcs)[Math.floor(Math.random() * (pool.length || heroImgSrcs.length))];
       if (src === 'IMG_3716.png') itemSize = Math.round(SIZE * 1.28);
       else itemSize = Math.round(SIZE * 0.72);
@@ -1229,7 +1279,7 @@
       const img = document.createElement('img');
       img.src = src; img.draggable = false;
       el.appendChild(img);
-      vy = stageDef.vyMin + Math.random() * (stageDef.vyMax - stageDef.vyMin);
+      vy = cfg.vyMin + Math.random() * (cfg.vyMax - cfg.vyMin);
     } else {
       el.style.fontSize   = itemSize * 0.7 + 'px';
       el.style.lineHeight = '1';
@@ -1270,7 +1320,6 @@
       score++;
       checkFever();
       checkSpeedBoost();
-      checkStage();
       // 和睦チェック（IMG_3716を5回連続）
       if (el.dataset.src === 'IMG_3716.png') { bossConsecutive++; } else { bossConsecutive = 0; }
       if (bossConsecutive >= 5) {
@@ -1279,10 +1328,11 @@
         setTimeout(() => { el.remove(); endGame(); }, 430);
         return;
       }
+      const cfg = STAGE_CONFIGS[currentStageNum - 1];
       showFloatScore(cx, cy, score);
       document.getElementById('hudScore').textContent  = `💥 ${score}体撃破`;
-      document.getElementById('hudRemain').textContent = `残り ${TOTAL_ITEMS - score}体`;
-      if (score >= TOTAL_ITEMS) {
+      document.getElementById('hudRemain').textContent = `残り ${Math.max(0, cfg.quota - score)}体`;
+      if (score >= cfg.quota) {
         gameWon = true; gameOver = true;
         stopSpawn(); stopTimer();
         setTimeout(() => { el.remove(); endGame(); }, 430);
@@ -1293,16 +1343,16 @@
   }
 
   function getSpawnInterval() {
-    const base = score >= 80 ? 80 : score >= 60 ? 120 : score >= 30 ? 155 : SPAWN_INTERVAL_MS;
     let mult = Math.max(0.45, Math.pow(0.88, speedBoostCount));
     if ($game.classList.contains('fever-lv2')) mult *= 0.72;
-    return Math.max(45, Math.round(base * mult));
+    return Math.max(45, Math.round(SPAWN_INTERVAL_MS * mult));
   }
 
   function spawnLoop() {
-    if (gameOver || totalSpawned >= TOTAL_ITEMS) return;
+    const cfg = STAGE_CONFIGS[currentStageNum - 1];
+    if (gameOver || totalSpawned >= cfg.spawnLimit) return;
     spawnItem();
-    if (totalSpawned < TOTAL_ITEMS) {
+    if (totalSpawned < cfg.spawnLimit) {
       spawnTimerId = setTimeout(spawnLoop, getSpawnInterval());
     }
   }
@@ -1331,10 +1381,12 @@ function runCountdown(cb) {
   }
 
   /* ── ゲーム開始 ── */
-  function startGame() {
+  function startStage(stageNum) {
+    currentStageNum = stageNum;
+    const cfg = STAGE_CONFIGS[currentStageNum - 1];
     stopBGM();
     document.getElementById('dangerOverlay').classList.remove('active');
-    $game.querySelectorAll('.tap-item,.particle,.float-score').forEach(e => e.remove());
+    $game.querySelectorAll('.tap-item,.particle,.float-score,.stage-label').forEach(e => e.remove());
 
     score          = 0;
     gameOver       = false;
@@ -1346,8 +1398,7 @@ function runCountdown(cb) {
     lastWarnSecond = -1;
     feverMode        = false;
     recentKills      = [];
-    bossConsecutive      = 0;
-    gameWonReconcile     = false;
+    if (stageNum === 1) { bossConsecutive = 0; gameWonReconcile = false; totalScore = 0; totalElapsed = 0; }
     gameEndType          = '';
     speedBoostCount      = 0;
     speedBoostNextThresh = 5;
@@ -1357,7 +1408,7 @@ function runCountdown(cb) {
     clearTimeout(powerUpTimer);
     clearTimeout(powerSpawnTimer);
     fireTimer = null; powerUpTimer = null; powerSpawnTimer = null;
-    powerUpActive = false; powerUpType = null; currentStage = 1;
+    powerUpActive = false; powerUpType = null;
     bullets.forEach(b => b.el.remove()); bullets = [];
     enemies.forEach(e => { if (e.el.isConnected) e.el.remove(); }); enemies = [];
     powerItems.forEach(p => { if (p.el.isConnected) p.el.remove(); }); powerItems = [];
@@ -1368,25 +1419,28 @@ function runCountdown(cb) {
     stopSpawn();
 
     const timerEl = document.getElementById('hudTimer');
-    timerEl.textContent = GAME_DURATION.toFixed(2);
+    timerEl.textContent = cfg.duration.toFixed(2);
     timerEl.classList.remove('orange','red');
     document.getElementById('hudScore').textContent  = '💥 0体撃破';
-    document.getElementById('hudRemain').textContent = `残り ${TOTAL_ITEMS}体`;
+    document.getElementById('hudRemain').textContent = `残り ${cfg.quota}体`;
 
     showScreen($game);
+    showStageLabel(cfg.label);
+    setTimeout(() => playStageUp(), 100);
     runCountdown(() => {
       startTime   = Date.now();
-      gameEndTime = startTime + GAME_DURATION * 1000;
+      gameEndTime = startTime + cfg.duration * 1000;
       playerX     = window.innerWidth / 2;
       updateShipPosition();
       startBGM();
       for (let i = 0; i < INITIAL_SPAWN; i++) spawnItem();
       spawnTimerId = setTimeout(spawnLoop, SPAWN_INTERVAL_MS);
       fireBulletLoop();
-      powerSpawnTimer = setTimeout(spawnPowerUp, 8000 + Math.random() * 5000);
+      powerSpawnTimer = setTimeout(spawnPowerUp, 7000 + Math.random() * 5000);
       rafId = requestAnimationFrame(tickTimer);
     });
   }
+  function startGame() { startStage(1); }
 
   /* ── ゲーム終了 ── */
   function endGame() {
@@ -1396,49 +1450,71 @@ function runCountdown(cb) {
     powerItems.forEach(p => { if (p.el.isConnected) p.el.remove(); }); powerItems = [];
     document.getElementById('dangerOverlay').classList.remove('active');
     stopBGM();
+
+    const stageElapsed = startTime ? (Date.now() - startTime) / 1000 : 99;
+    totalScore  += score;
+    totalElapsed += stageElapsed;
+
+    // 和睦（どのステージでも5連続で即終了）
     if (gameWonReconcile) {
       gameEndType = 'reconcile';
       playClear();
       const msg = document.getElementById('reconcileMsg');
       msg.classList.add('show');
       setTimeout(() => {
-        msg.classList.remove('show');
-        msg.classList.add('hide');
+        msg.classList.remove('show'); msg.classList.add('hide');
         setTimeout(() => { msg.classList.remove('hide'); showResult(); }, 520);
       }, 2200);
       return;
     }
-    if (!gameWon && score === 0) {
+
+    // ステージクリア → 次ステージへ
+    if (gameWon && currentStageNum < STAGE_CONFIGS.length) {
+      playClear();
+      showStageResult(true, stageElapsed);
+      return;
+    }
+
+    // 0体（ステージ1のみ判定）
+    if (!gameWon && currentStageNum === 1 && score === 0) {
       gameEndType = 'conquest';
       const msg = document.getElementById('conquestMsg');
       msg.classList.add('show');
       setTimeout(() => {
-        msg.classList.remove('show');
-        msg.classList.add('hide');
+        msg.classList.remove('show'); msg.classList.add('hide');
         setTimeout(() => { msg.classList.remove('hide'); showResult(); }, 520);
       }, 2200);
       return;
     }
-    const elapsed = startTime ? (Date.now() - startTime) / 1000 : 99;
-    if (gameWon && elapsed < 20) {
-      gameEndType = 'overwhelm';
+
+    // 全ステージクリア or 失敗
+    if (gameWon && currentStageNum === STAGE_CONFIGS.length) {
+      gameEndType = totalElapsed < 55 ? 'overwhelm' : 'win';
       playClear();
-      const msg = document.getElementById('overwhelmMsg');
-      msg.classList.add('show');
-      setTimeout(() => {
-        msg.classList.remove('show');
-        msg.classList.add('hide');
-        setTimeout(() => { msg.classList.remove('hide'); showResult(); }, 520);
-      }, 2200);
-      return;
+      const flash = document.getElementById('clearFlash');
+      flash.classList.remove('flashing'); void flash.offsetWidth; flash.classList.add('flashing');
+      setTimeout(() => showResult(), 500);
+    } else {
+      gameEndType = 'lose';
+      showStageResult(false, stageElapsed);
     }
-    gameEndType = gameWon ? 'win' : 'lose';
-    const flash = document.getElementById('clearFlash');
-    flash.classList.remove('flashing');
-    void flash.offsetWidth;
-    flash.classList.add('flashing');
-    if (gameWon) playClear();
-    setTimeout(() => showResult(), gameWon ? 500 : 350);
+  }
+
+  function showStageResult(won, elapsed) {
+    const cfg = STAGE_CONFIGS[currentStageNum - 1];
+    document.getElementById('stgResNum').textContent   = cfg.label;
+    document.getElementById('stgResTitle').textContent = won ? 'CLEAR！' : 'FAILED';
+    document.getElementById('stgResTitle').style.color = won ? '#ffd200' : '#ff3300';
+    document.getElementById('stgResScore').textContent = score;
+    document.getElementById('stgResDetail').textContent = `体撃破 / 目標 ${cfg.quota}体`;
+    document.getElementById('stgResTime').textContent  = `クリアタイム ${elapsed.toFixed(1)}秒`;
+    if (won) {
+      document.getElementById('nextStageNum').textContent = currentStageNum + 1;
+      document.getElementById('nextStageBtn').textContent = `STAGE ${currentStageNum + 1} へ ▶`;
+    } else {
+      document.getElementById('nextStageBtn').textContent = 'もう一度';
+    }
+    showScreen($stageResult);
   }
 
   /* ── スコア保存・ランキング ── */
@@ -1504,34 +1580,34 @@ function runCountdown(cb) {
 
   /* ── リザルト ── */
   function showResult() {
-    const elapsed = (Date.now() - startTime) / 1000;
+    const elapsed = totalElapsed;
     saveEnding(gameEndType);
     if (gameWonReconcile) {
-      saveScore(true, elapsed, score);
+      saveScore(true, elapsed, totalScore);
       document.getElementById('resLogo').textContent  = '🕊️';
       document.getElementById('resTitle').textContent = 'WIN WIN';
       document.getElementById('resTitle').className   = 'result-win-win';
-      document.getElementById('resScore').textContent = score;
+      document.getElementById('resScore').textContent = totalScore;
       document.getElementById('resLabel').textContent = '体撃破で和睦成立';
       document.getElementById('resRank').textContent  = '双方に名誉ある和解！';
     } else if (gameWon) {
       const rank = wonRankOf(elapsed);
-      saveScore(true, elapsed, score);
+      saveScore(true, elapsed, totalScore);
       document.getElementById('resLogo').textContent  = '🎉';
-      document.getElementById('resTitle').textContent = 'WIN';
+      document.getElementById('resTitle').textContent = gameEndType === 'overwhelm' ? '圧倒的勝利！' : 'WIN';
       document.getElementById('resTitle').className   = 'result-win';
       document.getElementById('resScore').textContent = elapsed.toFixed(1);
-      document.getElementById('resLabel').textContent = '秒でクリア！';
+      document.getElementById('resLabel').textContent = '秒で全ステージクリア！';
       const labels = { 1:'🥇 最速記録！', 2:'🥈 2位！', 3:'🥉 3位！' };
       document.getElementById('resRank').textContent  = labels[rank] || `第${rank}位`;
     } else {
-      saveScore(false, null, score);
+      saveScore(false, null, totalScore);
       document.getElementById('resLogo').textContent  = '💀';
       document.getElementById('resTitle').textContent = 'LOSE';
       document.getElementById('resTitle').className   = 'result-lose';
-      document.getElementById('resScore').textContent = score;
-      document.getElementById('resLabel').textContent = `/ ${TOTAL_ITEMS}体撃破`;
-      const msg = score < 20 ? 'ファイト！' : score < 50 ? 'もう少し！' : 'あと一歩！';
+      document.getElementById('resScore').textContent = totalScore;
+      document.getElementById('resLabel').textContent = `体撃破（STAGE ${currentStageNum} 失敗）`;
+      const msg = totalScore < 10 ? 'ファイト！' : totalScore < 25 ? 'もう少し！' : 'あと一歩！';
       document.getElementById('resRank').textContent  = msg;
     }
     renderLb('resLb');
@@ -1540,12 +1616,35 @@ function runCountdown(cb) {
   }
 
   /* ── ボタン ── */
+  function isFirstPlay() { return !localStorage.getItem('tg_story'); }
+  function markStoryPlayed() { localStorage.setItem('tg_story', '1'); }
+
+  function showStory(onDone) {
+    showScreen($story);
+    const content = document.getElementById('storyContent');
+    content.style.animation = 'none';
+    void content.offsetWidth;
+    content.style.animation = '';
+    const timer = setTimeout(() => onDone(), 13500);
+    document.getElementById('storySkipBtn').onclick = () => { clearTimeout(timer); onDone(); };
+  }
+
   document.getElementById('startBtn').addEventListener('click', () => {
-    initAudio();
-    unlockBGM();
-    startGame();
+    initAudio(); unlockBGM();
+    if (isFirstPlay()) {
+      markStoryPlayed();
+      showStory(() => startGame());
+    } else {
+      startGame();
+    }
   });
   document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); startGame(); });
+  document.getElementById('nextStageBtn').addEventListener('click', () => {
+    initAudio();
+    const won = document.getElementById('nextStageBtn').textContent.includes('STAGE');
+    if (won) startStage(currentStageNum + 1);
+    else startGame();
+  });
   // ゲーム画面タップのたびにAudioContext再開（iOS対策）
   document.getElementById('gameScreen').addEventListener('pointerdown', () => initAudio(), { capture: true });
   // 自機移動
