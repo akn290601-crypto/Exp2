@@ -651,7 +651,7 @@
   <div class="stg-detail" id="stgResDetail"></div>
   <div class="stg-detail" id="stgResTime"></div>
   <div class="btn-row" style="margin-top:36px;">
-    <button class="btn btn-primary" id="nextStageBtn">STAGE <span id="nextStageNum">2</span> へ ▶</button>
+    <button class="btn btn-primary" id="nextStageBtn">次のステージへ ▶</button>
   </div>
 </div>
 
@@ -1523,10 +1523,9 @@ function runCountdown(cb) {
     document.getElementById('stgResDetail').textContent = `体撃破 / 目標 ${cfg.quota}体`;
     document.getElementById('stgResTime').textContent  = `クリアタイム ${elapsed.toFixed(1)}秒`;
     if (won) {
-      document.getElementById('nextStageNum').textContent = currentStageNum + 1;
       document.getElementById('nextStageBtn').textContent = `STAGE ${currentStageNum + 1} へ ▶`;
     } else {
-      document.getElementById('nextStageBtn').textContent = 'もう一度';
+      document.getElementById('nextStageBtn').textContent = 'もう一度 ▶';
     }
     showScreen($stageResult);
   }
@@ -1630,9 +1629,6 @@ function runCountdown(cb) {
   }
 
   /* ── ボタン ── */
-  function isFirstPlay() { return !localStorage.getItem('tg_story'); }
-  function markStoryPlayed() { localStorage.setItem('tg_story', '1'); }
-
   function showStory(onDone) {
     showScreen($story);
     const content = document.getElementById('storyContent');
@@ -1645,12 +1641,7 @@ function runCountdown(cb) {
 
   document.getElementById('startBtn').addEventListener('click', () => {
     initAudio(); unlockBGM();
-    if (isFirstPlay()) {
-      markStoryPlayed();
-      showStory(() => startGame());
-    } else {
-      startGame();
-    }
+    showStory(() => startGame());
   });
   document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); startGame(); });
   document.getElementById('nextStageBtn').addEventListener('click', () => {
