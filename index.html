@@ -1657,12 +1657,31 @@ function runCountdown(cb) {
   /* ── ボタン ── */
   function showStory(onDone) {
     showScreen($story);
-    const content = document.getElementById('storyContent');
+    const content  = document.getElementById('storyContent');
+    const skipBtn  = document.getElementById('storySkipBtn');
     content.style.animation = 'none';
     void content.offsetWidth;
     content.style.animation = '';
-    const timer = setTimeout(() => onDone(), 13500);
-    document.getElementById('storySkipBtn').onclick = () => { clearTimeout(timer); onDone(); };
+    skipBtn.textContent = 'スキップ ▶';
+    $story.style.cursor = 'default';
+
+    const proceed = () => {
+      $story.onclick = null;
+      onDone();
+    };
+
+    // スクロール完了後は画面全体をタップで続行（ユーザージェスチャ確保）
+    const timer = setTimeout(() => {
+      skipBtn.textContent = '▶ タップして続ける';
+      $story.onclick = proceed;
+      $story.style.cursor = 'pointer';
+    }, 13500);
+
+    skipBtn.onclick = (e) => {
+      e.stopPropagation();
+      clearTimeout(timer);
+      proceed();
+    };
   }
 
   document.getElementById('startBtn').addEventListener('click', () => {
