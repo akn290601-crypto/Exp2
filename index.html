@@ -454,9 +454,9 @@
     #playerShip {
       position: absolute;
       bottom: 30px;
-      left: calc(50% - 32px);
-      width: 64px;
-      height: 64px;
+      left: calc(50% - 44px);
+      width: 88px;
+      height: 88px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1004,7 +1004,7 @@
   /* ── Shooter ── */
   function updateShipPosition() {
     const ship = document.getElementById('playerShip');
-    if (ship) ship.style.left = (playerX - 32) + 'px';
+    if (ship) ship.style.left = (playerX - 44) + 'px';
   }
 
   function getFireInterval() {
@@ -1017,7 +1017,7 @@
   function fireBullet() {
     if (gameOver) return;
     const bw = 6, bh = 20;
-    const y = window.innerHeight - 30 - 64 - bh;
+    const y = window.innerHeight - 30 - 88 - bh;
     const makeEl = (x) => {
       const el = document.createElement('div');
       el.className = 'bullet';
