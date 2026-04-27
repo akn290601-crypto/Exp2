@@ -450,6 +450,33 @@
       animation: float-up 1s ease-out forwards;
     }
 
+    /* ── Player ship ── */
+    #playerShip {
+      position: absolute;
+      bottom: 30px;
+      left: calc(50% - 32px);
+      width: 64px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      filter: drop-shadow(0 0 12px rgba(0,200,255,0.8));
+      pointer-events: none;
+      z-index: 12;
+    }
+    /* ── Bullets ── */
+    .bullet {
+      position: absolute;
+      width: 6px;
+      height: 20px;
+      border-radius: 3px;
+      background: linear-gradient(to top, #00ffee, #ffffff);
+      box-shadow: 0 0 8px 2px rgba(0,255,238,0.8);
+      pointer-events: none;
+      z-index: 11;
+    }
+
     /* 結果 */
     .result-score { font-size: 4rem; font-weight: 900; color: #ffd200; margin: 8px 0 2px; }
     .result-label { font-size: 1.1rem; color: #aaa; margin-bottom: 4px; }
@@ -462,7 +489,7 @@
 <!-- ① スタート -->
 <div class="screen" id="nameScreen">
   <img src="logo_tokiwa.png" class="title-logo" alt="トキワ帝国の野望">
-  <p class="sub">トキワ兵を28秒以内に全滅させろ！<br>触れるだけで撃破！</p>
+  <p class="sub">スライドで移動・自動射撃でトキワ兵を全滅させろ！</p>
   <button class="btn btn-primary" id="startBtn">ゲームスタート</button>
   <div class="lb-wrap" id="topLb"></div>
   <div class="lb-wrap" id="topEndingHistory"></div>
@@ -484,6 +511,7 @@
     <div class="rc-title">🕊️ 和平成立</div>
     <div class="rc-main">和睦</div>
   </div>
+  <div id="playerShip">🚀</div>
   <div id="countdown"></div>
   <div class="game-hud">
     <div class="hud-timer" id="hudTimer">28.00</div>
@@ -520,7 +548,7 @@
   const MEDALS            = ['🥇','🥈','🥉'];
   const HERO_SRCS         = ['IMG_3716.png','IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png'];
   const GAME_DURATION     = 28;
-  const TOTAL_ITEMS       = 180;
+  const TOTAL_ITEMS       = 60;
   const SPAWN_INTERVAL_MS = 190;
   const INITIAL_SPAWN     = 5;
 
@@ -544,6 +572,10 @@
   let speedBoostCount      = 0;
   let speedBoostNextThresh = 5;
   let recentKillsSpeed     = [];
+  let playerX   = 0;
+  let bullets   = [];
+  let enemies   = [];
+  let fireTimer = null;
 
   const $name   = document.getElementById('nameScreen');
   const $game   = document.getElementById('gameScreen');
@@ -809,6 +841,91 @@
     }, 5000);
   }
 
+  /* ── Shooter ── */
+  function updateShipPosition() {
+    const ship = document.getElementById('playerShip');
+    if (ship) ship.style.left = (playerX - 32) + 'px';
+  }
+
+  function getFireInterval() {
+    if ($game.classList.contains('fever-lv2')) return 90;
+    if ($game.classList.contains('fever')) return 120;
+    return 150;
+  }
+
+  function fireBullet() {
+    if (gameOver) return;
+    const bw = 6, bh = 20;
+    const y = window.innerHeight - 30 - 64 - bh;
+    const makeEl = (x) => {
+      const el = document.createElement('div');
+      el.className = 'bullet';
+      el.style.left = (x - bw / 2) + 'px';
+      el.style.top  = y + 'px';
+      $game.appendChild(el);
+      return el;
+    };
+    if ($game.classList.contains('fever-lv2')) {
+      [[-8, -12], [0, -15], [8, -12]].forEach(([vx, vy]) => {
+        const el = makeEl(playerX);
+        bullets.push({ el, x: playerX - bw / 2, y, vx, vy });
+      });
+    } else {
+      const el = makeEl(playerX);
+      bullets.push({ el, x: playerX - bw / 2, y, vx: 0, vy: -15 });
+    }
+  }
+
+  function fireBulletLoop() {
+    if (gameOver) return;
+    fireBullet();
+    fireTimer = setTimeout(fireBulletLoop, getFireInterval());
+  }
+
+  function updateBullets() {
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      const b = bullets[i];
+      b.x += b.vx;
+      b.y += b.vy;
+      b.el.style.left = b.x + 'px';
+      b.el.style.top  = b.y + 'px';
+      if (b.y < -30) { b.el.remove(); bullets.splice(i, 1); }
+    }
+  }
+
+  function updateEnemies() {
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const e = enemies[i];
+      if (!e.el.isConnected || e.el.classList.contains('bursting') || e.el.classList.contains('pre-burst')) {
+        enemies.splice(i, 1); continue;
+      }
+      e.x += e.vx;
+      e.x = Math.max(0, Math.min(window.innerWidth - e.size, e.x));
+      e.y += e.vy;
+      e.el.style.left = e.x + 'px';
+      e.el.style.top  = e.y + 'px';
+      if (e.y > window.innerHeight + 20) { e.el.remove(); enemies.splice(i, 1); }
+    }
+  }
+
+  function checkCollisions() {
+    const bh = 20;
+    for (let bi = bullets.length - 1; bi >= 0; bi--) {
+      const b = bullets[bi];
+      const bx1 = b.x, by1 = b.y, bx2 = b.x + 6, by2 = b.y + bh;
+      for (let ei = enemies.length - 1; ei >= 0; ei--) {
+        const e = enemies[ei];
+        if (e.el.classList.contains('bursting') || e.el.classList.contains('pre-burst')) continue;
+        if (bx2 > e.x && bx1 < e.x + e.size && by2 > e.y && by1 < e.y + e.size) {
+          b.el.remove(); bullets.splice(bi, 1);
+          enemies.splice(ei, 1);
+          triggerBurst(e.el);
+          break;
+        }
+      }
+    }
+  }
+
   function createShatter(el) {
     const imgEl = el.querySelector('img');
     if (!imgEl) return;
@@ -875,6 +992,11 @@
         return;
       }
     }
+    if (gameEndTime && !gameOver) {
+      updateBullets();
+      updateEnemies();
+      checkCollisions();
+    }
     rafId = requestAnimationFrame(tickTimer);
   }
   function stopTimer() { cancelAnimationFrame(rafId); rafId = null; }
@@ -884,10 +1006,8 @@
     if (gameOver || totalSpawned >= TOTAL_ITEMS) return;
     totalSpawned++;
 
-    const hudH         = $game.querySelector('.game-hud').offsetHeight || 56;
-    const topMargin    = 20;
-    const bottomMargin = 130;
-    const W = window.innerWidth, H = window.innerHeight;
+    const hudH = $game.querySelector('.game-hud').offsetHeight || 56;
+    const W    = window.innerWidth;
 
     const el = document.createElement('div');
     el.className = 'tap-item';
@@ -915,16 +1035,17 @@
 
     const sideMargin = 16;
     const x = sideMargin + Math.random() * Math.max(0, W - sideMargin * 2 - itemSize);
-    const y = hudH + topMargin + Math.random() * Math.max(0, H - hudH - topMargin - bottomMargin - itemSize);
+    const y = hudH - itemSize - 4;
     el.style.left = x + 'px';
     el.style.top  = y + 'px';
 
-    el.addEventListener('pointerdown', () => triggerBurst(el));
-    el.addEventListener('pointerenter', (e) => { if (e.buttons > 0) triggerBurst(el); });
+    const vx = (Math.random() - 0.5) * 1.2;
+    const vy = 1.0 + Math.random() * 1.0;
 
     el.classList.add('spawning');
     el.addEventListener('animationend', () => el.classList.remove('spawning'), { once: true });
     $game.appendChild(el);
+    enemies.push({ el, x, y, vx, vy, size: itemSize });
   }
 
   function triggerBurst(el) {
@@ -1026,6 +1147,11 @@ function runCountdown(cb) {
     speedBoostNextThresh = 5;
     recentKillsSpeed     = [];
     clearTimeout(feverTimer);
+    clearTimeout(fireTimer);
+    fireTimer = null;
+    bullets.forEach(b => b.el.remove()); bullets = [];
+    enemies.forEach(e => { if (e.el.isConnected) e.el.remove(); }); enemies = [];
+    $game.querySelectorAll('.bullet').forEach(e => e.remove());
     $game.classList.remove('fever', 'fever-lv2');
     stopTimer();
     stopSpawn();
@@ -1040,15 +1166,20 @@ function runCountdown(cb) {
     runCountdown(() => {
       startTime   = Date.now();
       gameEndTime = startTime + GAME_DURATION * 1000;
+      playerX     = window.innerWidth / 2;
+      updateShipPosition();
       startBGM();
       for (let i = 0; i < INITIAL_SPAWN; i++) spawnItem();
       spawnTimerId = setTimeout(spawnLoop, SPAWN_INTERVAL_MS);
+      fireBulletLoop();
       rafId = requestAnimationFrame(tickTimer);
     });
   }
 
   /* ── ゲーム終了 ── */
   function endGame() {
+    clearTimeout(fireTimer); fireTimer = null;
+    bullets.forEach(b => b.el.remove()); bullets = [];
     document.getElementById('dangerOverlay').classList.remove('active');
     stopBGM();
     if (gameWonReconcile) {
@@ -1203,6 +1334,14 @@ function runCountdown(cb) {
   document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); startGame(); });
   // ゲーム画面タップのたびにAudioContext再開（iOS対策）
   document.getElementById('gameScreen').addEventListener('pointerdown', () => initAudio(), { capture: true });
+  // 自機移動
+  const moveShip = (e) => {
+    if (gameOver || !gameEndTime) return;
+    playerX = Math.max(32, Math.min(window.innerWidth - 32, e.clientX));
+    updateShipPosition();
+  };
+  document.getElementById('gameScreen').addEventListener('pointermove', moveShip);
+  document.getElementById('gameScreen').addEventListener('pointerdown', moveShip);
   document.getElementById('backBtn').addEventListener('click', () => {
     renderLb('topLb');
     renderEndingHistory('topEndingHistory');
