@@ -532,21 +532,19 @@
       pointer-events: none;
       z-index: 25;
       transform: translate(-50%, -50%);
+      will-change: left, top;
     }
     .ebullet.s1 {
       width: 11px; height: 11px;
-      background: radial-gradient(circle, #ff8888 0%, #ff0000 65%, transparent 100%);
-      box-shadow: 0 0 6px #ff2200, 0 0 14px rgba(255,0,0,0.4);
+      background: radial-gradient(circle, #ff8888 0%, #ff2200 70%, transparent 100%);
     }
     .ebullet.s2 {
       width: 11px; height: 11px;
-      background: radial-gradient(circle, #ee88ff 0%, #cc00ff 65%, transparent 100%);
-      box-shadow: 0 0 6px #bb00ff, 0 0 14px rgba(200,0,255,0.4);
+      background: radial-gradient(circle, #ee88ff 0%, #cc00ff 70%, transparent 100%);
     }
     .ebullet.s3 {
       width: 13px; height: 13px;
-      background: radial-gradient(circle, #88eeff 0%, #0099ff 65%, transparent 100%);
-      box-shadow: 0 0 8px #0088ff, 0 0 18px rgba(0,100,255,0.5);
+      background: radial-gradient(circle, #88eeff 0%, #0099ff 70%, transparent 100%);
     }
     /* ライフ表示 */
     #hudLives { font-size: 1.1rem; letter-spacing: 2px; }
@@ -851,7 +849,7 @@
   const MEDALS            = ['🥇','🥈','🥉'];
   const HERO_SRCS         = ['IMG_3716.png','IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png'];
   const SPAWN_INTERVAL_MS = 320;
-  const INITIAL_SPAWN     = 6;
+  const INITIAL_SPAWN     = 3;
   const STAGE_CONFIGS = [
     { num: 1, label: 'STAGE 1', quota: 20, spawnLimit: 20,
       srcs: ['IMG_3755.png','IMG_3756.png','IMG_3757.png'], vyMin: 0.4, vyMax: 0.8 },
@@ -1103,6 +1101,7 @@
 
   /* ── 弾幕：敵の弾 ── */
   function spawnEnemyBullet(x, y, vx, vy) {
+    if (enemyBullets.length >= 80) return; // 上限キャップ
     const el = document.createElement('div');
     el.className = 'ebullet s' + currentStageNum;
     el.style.left = x + 'px';
@@ -1250,10 +1249,10 @@
     const cx   = rect.left - gr.left + rect.width  / 2;
     const cy   = rect.top  - gr.top  + rect.height / 2;
     const colors = ['#ff4400','#ff8800','#ffdd00','#ff2200','#ffaa00','#ffffff','#ff66aa','#ffcc00','#ff0066'];
-    for (let i = 0; i < 22; i++) {
+    for (let i = 0; i < 10; i++) {
       const p = document.createElement('div');
       p.className = 'particle';
-      const angle = (i / 22) * Math.PI * 2;
+      const angle = (i / 10) * Math.PI * 2;
       const dist  = 65 + Math.random() * 90;
       const sz    = 8 + Math.random() * 12;
       p.style.cssText =
@@ -1537,7 +1536,7 @@
     const ex    = rect.left - gr.left;
     const ey    = rect.top  - gr.top;
     const iSize = parseInt(el.style.width) || SIZE;
-    const cols  = 4, rows = 4;
+    const cols  = 3, rows = 3;
     const fw    = iSize / cols;
     const fh    = iSize / rows;
     for (let r = 0; r < rows; r++) {
