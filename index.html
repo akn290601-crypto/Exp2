@@ -1684,6 +1684,8 @@ function runCountdown(cb) {
   /* ── ボタン ── */
   function showStory(onDone) {
     showScreen($story);
+    stopBGM();        // ゲームBGM確実停止
+    stopStoryBgm();   // 前回の残りも停止
     const crawl   = document.getElementById('crawlText');
     const intro   = document.getElementById('storyIntro');
     const skipBtn = document.getElementById('storySkipBtn');
