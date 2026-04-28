@@ -496,9 +496,9 @@
     #playerShip {
       position: absolute;
       bottom: 30px;
-      left: calc(50% - 56px);
-      width: 112px;
-      height: 112px;
+      left: calc(50% - 28px);
+      width: 56px;
+      height: 56px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -853,11 +853,11 @@
   const SPAWN_INTERVAL_MS = 320;
   const INITIAL_SPAWN     = 6;
   const STAGE_CONFIGS = [
-    { num: 1, label: 'STAGE 1', quota: 40, spawnLimit: 40,
+    { num: 1, label: 'STAGE 1', quota: 20, spawnLimit: 20,
       srcs: ['IMG_3755.png','IMG_3756.png','IMG_3757.png'], vyMin: 0.4, vyMax: 0.8 },
-    { num: 2, label: 'STAGE 2', quota: 60, spawnLimit: 60,
+    { num: 2, label: 'STAGE 2', quota: 30, spawnLimit: 30,
       srcs: ['IMG_3755.png','IMG_3756.png','IMG_3757.png','IMG_3716.png','IMG_3751.png'], vyMin: 0.6, vyMax: 1.1 },
-    { num: 3, label: 'STAGE 3', quota: 80, spawnLimit: 80,
+    { num: 3, label: 'STAGE 3', quota: 40, spawnLimit: 40,
       srcs: ['IMG_3755.png','IMG_3756.png','IMG_3757.png','IMG_3716.png','IMG_3751.png','IMG_3753.png'], vyMin: 0.9, vyMax: 1.5 },
   ];
 
@@ -1317,7 +1317,7 @@
   /* ── Shooter ── */
   function updateShipPosition() {
     const ship = document.getElementById('playerShip');
-    if (ship) ship.style.left = (playerX - 56) + 'px';
+    if (ship) ship.style.left = (playerX - 28) + 'px';
   }
 
   function getFireInterval() {
@@ -1330,7 +1330,7 @@
   function fireBullet() {
     if (gameOver) return;
     const bw = 6, bh = 20;
-    const y = window.innerHeight - 30 - 112 - bh;
+    const y = window.innerHeight - 30 - 56 - bh;
     const makeEl = (x) => {
       const el = document.createElement('div');
       el.className = 'bullet';
