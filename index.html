@@ -335,6 +335,8 @@
     .hud-right  { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex-shrink: 0; }
     .hud-score  { font-size: 0.75rem; font-weight: 700; color: #ffd200; white-space: nowrap; }
     .hud-remain { font-size: 0.95rem; font-weight: 900; color: #ff6633; white-space: nowrap; }
+    .hud-power  { font-size: 0.75rem; font-weight: 700; color: #00ffee; white-space: nowrap; opacity: 0; transition: opacity 0.3s; }
+    .hud-power.active { opacity: 1; animation: power-pulse 0.6s ease-in-out infinite alternate; }
 
     /* カウントダウン */
     #countdown {
@@ -779,6 +781,7 @@
       <div id="hudLives">❤️❤️❤️</div>
     </div>
     <div class="hud-right">
+      <div class="hud-power"  id="hudPower"></div>
       <div class="hud-score"  id="hudScore">💥 0体撃破</div>
       <div class="hud-remain" id="hudRemain">残り 99体</div>
     </div>
@@ -850,8 +853,8 @@
   const SIZE              = 90;
   const MEDALS            = ['🥇','🥈','🥉'];
   const HERO_SRCS         = ['IMG_3716.png','IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png'];
-  const SPAWN_INTERVAL_MS = 320;
-  const INITIAL_SPAWN     = 3;
+  const SPAWN_INTERVAL_MS = 700;
+  const INITIAL_SPAWN     = 2;
   const STAGE_CONFIGS = [
     { num: 1, label: 'STAGE 1', quota: 20, spawnLimit: 20,
       srcs: ['IMG_3755.png','IMG_3756.png','IMG_3757.png'], vyMin: 0.4, vyMax: 0.8 },
@@ -1371,8 +1374,7 @@
   }
 
   function updateEnemies() {
-    const hudH      = ($game.querySelector('.game-hud') || {}).offsetHeight || 56;
-    const bottomLim = window.innerHeight - 80;
+    const hudH = ($game.querySelector('.game-hud') || {}).offsetHeight || 56;
     for (let i = enemies.length - 1; i >= 0; i--) {
       const e = enemies[i];
       if (!e.el.isConnected || e.el.classList.contains('bursting') || e.el.classList.contains('pre-burst')) {
@@ -1381,14 +1383,15 @@
       e.x += e.vx;
       e.x = Math.max(0, Math.min(window.innerWidth - e.size, e.x));
       e.y += e.vy;
-      // 画面下端でバウンス（敵が逃げない）
-      if (e.y + e.size > bottomLim) {
-        e.y = bottomLim - e.size;
-        e.vy = -Math.abs(e.vy) * 0.75;
-        e.vx += (Math.random() - 0.5) * 0.6;
-      }
       // 上端はHUDより下に留める
       if (e.y < hudH) { e.y = hudH; e.vy = Math.abs(e.vy); }
+      // 画面下端を超えたら画面外に流して除去
+      if (e.y > window.innerHeight + 10) {
+        clearTimeout(e.shootTimer);
+        e.el.remove();
+        enemies.splice(i, 1);
+        continue;
+      }
       e.el.style.left = e.x + 'px';
       e.el.style.top  = e.y + 'px';
     }
@@ -1495,15 +1498,27 @@
       }
     }
   }
+  const POWER_NAMES = { rapidfire: '⭐ 連射強化', spread: '💥 拡散弾' };
+  function updatePowerHUD() {
+    const el = document.getElementById('hudPower');
+    if (!el) return;
+    if (powerUpActive && powerUpType) {
+      el.textContent = POWER_NAMES[powerUpType] || 'パワーアップ';
+      el.className = 'hud-power active';
+    } else {
+      el.textContent = '';
+      el.className = 'hud-power';
+    }
+  }
   function activatePowerUp(type, cx, cy) {
     clearTimeout(powerUpTimer);
     powerUpActive = true;
     powerUpType   = type;
     navigator.vibrate?.([40, 30, 80]);
-    const names = { rapidfire: '⭐ 連射強化！', spread: '💥 拡散弾！' };
     const labelEl = document.getElementById('powerUpLabel');
-    labelEl.textContent = names[type] || 'パワーアップ！';
+    labelEl.textContent = (POWER_NAMES[type] || 'パワーアップ') + '！';
     labelEl.className = 'active';
+    updatePowerHUD();
     try {
       const ctx = getCtx(); if (ctx) {
         const osc = ctx.createOscillator(), g = ctx.createGain();
@@ -1518,12 +1533,13 @@
     const fl = document.createElement('div');
     fl.className = 'float-score';
     fl.style.cssText = `color:#00ffee;font-size:1.4rem;left:${cx - 55}px;top:${cy - 20}px;`;
-    fl.textContent = names[type];
+    fl.textContent = (POWER_NAMES[type] || 'パワーアップ') + '！';
     $game.appendChild(fl);
     setTimeout(() => fl.remove(), 1000);
     powerUpTimer = setTimeout(() => {
       powerUpActive = false; powerUpType = null;
       document.getElementById('powerUpLabel').className = '';
+      updatePowerHUD();
     }, 10000);
   }
 
@@ -1730,16 +1746,19 @@ function runCountdown(cb) {
     recentKillsSpeed     = [];
     clearTimeout(feverTimer);
     clearTimeout(fireTimer);
-    clearTimeout(powerUpTimer);
+    if (stageNum === 1) {
+      clearTimeout(powerUpTimer);
+      powerUpTimer = null; powerUpActive = false; powerUpType = null;
+    }
     clearTimeout(powerSpawnTimer);
-    fireTimer = null; powerUpTimer = null; powerSpawnTimer = null;
-    powerUpActive = false; powerUpType = null;
+    fireTimer = null; powerSpawnTimer = null;
     bullets.forEach(b => b.el.remove()); bullets = [];
     enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
     enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
     powerItems.forEach(p => { if (p.el.isConnected) p.el.remove(); }); powerItems = [];
     $game.querySelectorAll('.bullet,.power-item,.ebullet').forEach(e => e.remove());
-    document.getElementById('powerUpLabel').className = '';
+    if (stageNum === 1) document.getElementById('powerUpLabel').className = '';
+    updatePowerHUD();
     $game.classList.remove('fever', 'fever-lv2');
     clearTimeout(invincibleTimer);
     playerInvincible = false;
