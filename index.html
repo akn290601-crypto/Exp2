@@ -755,7 +755,7 @@
   const SIZE              = 90;
   const MEDALS            = ['🥇','🥈','🥉'];
   const HERO_SRCS         = ['IMG_3716.png','IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png'];
-  const SPAWN_INTERVAL_MS = 380;
+  const SPAWN_INTERVAL_MS = 600;
   const INITIAL_SPAWN     = 3;
   const STAGE_CONFIGS = [
     { num: 1, label: 'STAGE 1', quota: 15, spawnLimit: 15,
@@ -1079,9 +1079,9 @@
   }
 
   function getFireInterval() {
-    let base = powerUpActive && powerUpType === 'rapidfire' ? 60 : 150;
-    if ($game.classList.contains('fever-lv2')) return Math.min(base, 90);
-    if ($game.classList.contains('fever')) return Math.min(base, 120);
+    let base = powerUpActive && powerUpType === 'rapidfire' ? 100 : 280;
+    if ($game.classList.contains('fever-lv2')) return Math.min(base, 140);
+    if ($game.classList.contains('fever')) return Math.min(base, 200);
     return base;
   }
 
@@ -1418,7 +1418,7 @@
   function getSpawnInterval() {
     let mult = Math.max(0.45, Math.pow(0.88, speedBoostCount));
     if ($game.classList.contains('fever-lv2')) mult *= 0.72;
-    return Math.max(180, Math.round(SPAWN_INTERVAL_MS * mult));
+    return Math.max(300, Math.round(SPAWN_INTERVAL_MS * mult));
   }
 
   function spawnLoop() {
