@@ -1639,7 +1639,7 @@ function runCountdown(cb) {
   let storyBgm = null;
   function playStoryBgm() {
     if (storyBgm) { storyBgm.pause(); storyBgm.currentTime = 0; }
-    storyBgm = new Audio('tokiwa-galaxy.mp3');
+    storyBgm = new Audio('tokiwa-echo.mp3');
     storyBgm.loop = false;
     storyBgm.volume = 0.8;
     storyBgm.play().catch(() => {});
