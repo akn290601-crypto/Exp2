@@ -597,6 +597,13 @@
       left: 50%;
       transform: translateX(-50%);
       z-index: 10;
+      white-space: nowrap;
+    }
+    #storySkipBtn.proceed {
+      background: linear-gradient(135deg, #f7971e, #ffd200);
+      color: #1a1a1a;
+      font-size: 1.1rem;
+      animation: power-pulse 0.7s ease-in-out infinite alternate;
     }
 
     /* ── Video screen ── */
@@ -1696,26 +1703,36 @@ function runCountdown(cb) {
     const crawl   = document.getElementById('crawlText');
     const intro   = document.getElementById('storyIntro');
     const skipBtn = document.getElementById('storySkipBtn');
+
     // アニメーションをリセット
     [crawl, intro].forEach(el => { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; });
     skipBtn.textContent = 'スキップ ▶';
+    skipBtn.className = 'btn btn-secondary';
     $story.style.cursor = 'default';
+    $story.onclick = null;
+
+    const showProceed = () => {
+      skipBtn.textContent = '今　自由をかけた戦いが始まる';
+      skipBtn.className = 'btn btn-primary proceed';
+      $story.onclick = proceed;
+      $story.style.cursor = 'pointer';
+    };
 
     const proceed = () => {
       $story.onclick = null;
+      clearTimeout(fallbackTimer);
       onDone();
     };
 
-    // スクロール完了後は画面全体をタップで続行（ユーザージェスチャ確保）
-    const timer = setTimeout(() => {
-      skipBtn.textContent = '今　自由をかけた戦いが始まる';
-      $story.onclick = proceed;
-      $story.style.cursor = 'pointer';
-    }, 21000);
+    // animationend でクロール完了を検知（確実）
+    crawl.addEventListener('animationend', showProceed, { once: true });
+    // フォールバック（animationendが発火しない場合）
+    const fallbackTimer = setTimeout(showProceed, 22000);
 
     skipBtn.onclick = (e) => {
       e.stopPropagation();
-      clearTimeout(timer);
+      crawl.removeEventListener('animationend', showProceed);
+      clearTimeout(fallbackTimer);
       proceed();
     };
   }
