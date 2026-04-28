@@ -720,8 +720,7 @@
     </div>
   </div>
   <div id="storyLogo">
-    <div class="logo-title">トキワ帝国の野望</div>
-    <div class="logo-sub">TOKIWA EMPIRE AMBITION</div>
+    <img src="logo_tokiwa.png" alt="トキワ帝国の野望" style="width:80%;max-width:320px;display:block;margin:0 auto;">
   </div>
   <button class="btn btn-secondary" id="storySkipBtn">スキップ ▶</button>
 </div>
@@ -1701,8 +1700,8 @@ function runCountdown(cb) {
 
     // クロール開始（3s遅延）と同タイミングでBGM再生
     setTimeout(() => playStoryBgm(), 2000);
-    // クロール開始10秒後にロゴ表示（3s + 10s = 13s）
-    const logoTimer = setTimeout(() => logoEl.classList.add('visible'), 13000);
+    // クロール開始8秒後にロゴ表示（3s + 8s = 11s）
+    const logoTimer = setTimeout(() => logoEl.classList.add('visible'), 11000);
 
     const showProceed = () => {
       skipBtn.textContent = '今　自由をかけた戦いが始まる';
