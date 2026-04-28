@@ -1600,8 +1600,9 @@ function runCountdown(cb) {
     showStageLabel(cfg.label);
     setTimeout(() => playStageUp(), 100);
     runCountdown(() => {
-      startTime   = Date.now();
-      playerX     = window.innerWidth / 2;
+      startTime     = Date.now();
+      tiltSmoothed  = null;
+      playerX       = window.innerWidth / 2;
       updateShipPosition();
       startBGM();
       for (let i = 0; i < INITIAL_SPAWN; i++) spawnItem();
@@ -1835,8 +1836,33 @@ function runCountdown(cb) {
     };
   }
 
+  /* ── 傾き操作 ── */
+  let tiltSmoothed = null;
+  function handleTilt(e) {
+    if (gameOver || !startTime) return;
+    const gamma = e.gamma; // 左右傾き: 左=-90 右=90
+    if (gamma === null) return;
+    tiltSmoothed = tiltSmoothed === null ? gamma : tiltSmoothed * 0.65 + gamma * 0.35;
+    const range = 28; // この角度で画面端まで移動
+    const ratio = Math.max(-1, Math.min(1, tiltSmoothed / range));
+    playerX = window.innerWidth / 2 + ratio * (window.innerWidth / 2 - 40);
+    updateShipPosition();
+  }
+  async function enableTilt() {
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try {
+        const state = await DeviceOrientationEvent.requestPermission();
+        if (state === 'granted') window.addEventListener('deviceorientation', handleTilt);
+      } catch (_) {}
+    } else if (typeof DeviceOrientationEvent !== 'undefined') {
+      window.addEventListener('deviceorientation', handleTilt);
+    }
+  }
+
   document.getElementById('startBtn').addEventListener('click', () => {
     initAudio(); unlockBGM();
+    enableTilt();
     showStory(() => playIntroVideo(() => startGame()));
   });
   document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); startGame(); });
