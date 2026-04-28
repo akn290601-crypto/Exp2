@@ -540,28 +540,63 @@
     /* ── Story screen ── */
     #storyScreen {
       background: #000;
+      display: block;
       overflow: hidden;
-      justify-content: center;
     }
-    #storyContent {
+    /* 冒頭フェード行 */
+    #storyIntro {
       position: absolute;
-      width: 90%;
-      left: 5%;
-      text-align: center;
-      line-height: 3.2;
-      font-size: 1.45rem;
-      font-weight: 700;
-      color: #ffd200;
-      text-shadow: 0 0 16px rgba(255,210,0,0.7);
-      animation: story-scroll 13s linear forwards;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+      animation: intro-fade 4.5s ease-out forwards;
+      pointer-events: none;
     }
-    @keyframes story-scroll {
-      0%   { top: 110vh; }
-      100% { top: -260px; }
+    @keyframes intro-fade {
+      0%,35% { opacity: 1; }
+      85%,100% { opacity: 0; }
+    }
+    #storyIntro p {
+      color: #3366cc;
+      font-size: 1.1rem;
+      font-style: italic;
+      text-align: center;
+      letter-spacing: 0.08em;
+    }
+    /* クロール本体 */
+    #crawlWrap {
+      position: absolute;
+      inset: 0;
+      perspective: 260px;
+      perspective-origin: 50% 55%;
+      overflow: hidden;
+    }
+    #crawlText {
+      position: absolute;
+      width: 72%;
+      left: 14%;
+      color: #ffd200;
+      font-size: 1.5rem;
+      font-weight: 800;
+      line-height: 2.4;
+      text-align: center;
+      text-shadow: 0 0 8px rgba(255,210,0,0.4);
+      transform-origin: 50% 100%;
+      animation: crawl-move 16s linear 4.5s forwards;
+      transform: rotateX(28deg) translateY(110vh);
+    }
+    @keyframes crawl-move {
+      0%   { transform: rotateX(28deg) translateY(110vh); }
+      100% { transform: rotateX(28deg) translateY(-420%); }
     }
     #storySkipBtn {
       position: absolute;
       bottom: max(40px, env(safe-area-inset-bottom) + 20px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
     }
 
     /* ── Video screen ── */
@@ -636,17 +671,17 @@
 
 <!-- ④ ストーリー -->
 <div class="screen hidden" id="storyScreen">
-  <div id="storyContent">
+  <div id="storyIntro">
     <p>遠い昔、遥か彼方の銀河系で…</p>
-    <p>&nbsp;</p>
-    <p>地球はトキワ帝国の</p>
-    <p>侵攻の危機に瀕していた。</p>
-    <p>&nbsp;</p>
-    <p>そんな時</p>
-    <p>救世主が現れた</p>
-    <p>&nbsp;</p>
-    <p>パラレル世界の</p>
-    <p>トキワである。</p>
+  </div>
+  <div id="crawlWrap">
+    <div id="crawlText">
+      <p>地球はトキワ帝国の<br>侵攻の危機に瀕していた。</p>
+      <br><br>
+      <p>そんな時<br>救世主が現れた</p>
+      <br><br>
+      <p>パラレル世界の<br>トキワである。</p>
+    </div>
   </div>
   <button class="btn btn-secondary" id="storySkipBtn">スキップ ▶</button>
 </div>
@@ -1658,11 +1693,11 @@ function runCountdown(cb) {
   /* ── ボタン ── */
   function showStory(onDone) {
     showScreen($story);
-    const content  = document.getElementById('storyContent');
-    const skipBtn  = document.getElementById('storySkipBtn');
-    content.style.animation = 'none';
-    void content.offsetWidth;
-    content.style.animation = '';
+    const crawl   = document.getElementById('crawlText');
+    const intro   = document.getElementById('storyIntro');
+    const skipBtn = document.getElementById('storySkipBtn');
+    // アニメーションをリセット
+    [crawl, intro].forEach(el => { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; });
     skipBtn.textContent = 'スキップ ▶';
     $story.style.cursor = 'default';
 
@@ -1676,7 +1711,7 @@ function runCountdown(cb) {
       skipBtn.textContent = '今　自由をかけた戦いが始まる';
       $story.onclick = proceed;
       $story.style.cursor = 'pointer';
-    }, 13500);
+    }, 21000);
 
     skipBtn.onclick = (e) => {
       e.stopPropagation();
