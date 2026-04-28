@@ -495,8 +495,7 @@
     /* ── Player ship ── */
     #playerShip {
       position: absolute;
-      bottom: 30px;
-      left: calc(50% - 28px);
+      top: 0; left: 0;
       width: 56px;
       height: 56px;
       display: flex;
@@ -505,6 +504,7 @@
       font-size: 48px;
       filter: drop-shadow(0 0 12px rgba(0,200,255,0.8));
       pointer-events: none;
+      will-change: transform;
       z-index: 12;
       transition: opacity 0.1s;
     }
@@ -878,6 +878,7 @@
   let speedBoostNextThresh = 5;
   let recentKillsSpeed     = [];
   let playerX          = 0;
+  let playerY          = 0;
   let bullets          = [];
   let enemies          = [];
   let enemyBullets     = [];
@@ -1116,7 +1117,7 @@
     const ex = enemy.x + enemy.size / 2;
     const ey = enemy.y + enemy.size / 2;
     const px = playerX;
-    const py = window.innerHeight - 30 - 56;
+    const py = playerY;
     const dx = px - ex, dy = py - ey;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
     const spd = 2.2 + (currentStageNum - 1) * 0.6;
@@ -1161,7 +1162,7 @@
   function checkPlayerHit() {
     if (playerInvincible || gameOver) return;
     const phx = playerX;
-    const phy = window.innerHeight - 30 - 56;
+    const phy = playerY;
     const hitR = 12;
     for (let i = enemyBullets.length - 1; i >= 0; i--) {
       const b = enemyBullets[i];
@@ -1316,7 +1317,7 @@
   /* ── Shooter ── */
   function updateShipPosition() {
     const ship = document.getElementById('playerShip');
-    if (ship) ship.style.left = (playerX - 28) + 'px';
+    if (ship) ship.style.transform = `translate(${playerX - 28}px,${playerY - 28}px)`;
   }
 
   function getFireInterval() {
@@ -1329,7 +1330,7 @@
   function fireBullet() {
     if (gameOver) return;
     const bw = 6, bh = 20;
-    const y = window.innerHeight - 30 - 56 - bh;
+    const y = playerY - 28 - bh;
     const makeEl = (x) => {
       const el = document.createElement('div');
       el.className = 'bullet';
@@ -1758,7 +1759,9 @@ function runCountdown(cb) {
     runCountdown(() => {
       startTime     = Date.now();
       tiltSmoothed  = null;
+      tiltYSmoothed = null;
       playerX       = window.innerWidth / 2;
+      playerY       = window.innerHeight - 80;
       updateShipPosition();
       startBGM();
       for (let i = 0; i < INITIAL_SPAWN; i++) spawnItem();
@@ -1997,15 +2000,25 @@ function runCountdown(cb) {
   }
 
   /* ── 傾き操作 ── */
-  let tiltSmoothed = null;
+  let tiltSmoothed  = null;
+  let tiltYSmoothed = null;
   function handleTilt(e) {
     if (gameOver || !startTime) return;
-    const gamma = e.gamma; // 左右傾き: 左=-90 右=90
-    if (gamma === null) return;
-    tiltSmoothed = tiltSmoothed === null ? gamma : tiltSmoothed * 0.65 + gamma * 0.35;
-    const range = 28; // この角度で画面端まで移動
-    const ratio = Math.max(-1, Math.min(1, tiltSmoothed / range));
-    playerX = window.innerWidth / 2 + ratio * (window.innerWidth / 2 - 40);
+    const gamma = e.gamma;
+    const beta  = e.beta;
+    if (gamma !== null) {
+      tiltSmoothed = tiltSmoothed === null ? gamma : tiltSmoothed * 0.65 + gamma * 0.35;
+      const range = 28;
+      const ratio = Math.max(-1, Math.min(1, tiltSmoothed / range));
+      playerX = window.innerWidth / 2 + ratio * (window.innerWidth / 2 - 40);
+    }
+    if (beta !== null) {
+      tiltYSmoothed = tiltYSmoothed === null ? beta : tiltYSmoothed * 0.65 + beta * 0.35;
+      const betaNorm = tiltYSmoothed - 90;
+      const yRatio   = Math.max(-1, Math.min(1, betaNorm / 25));
+      const hudH = 80, maxY = window.innerHeight - 60;
+      playerY = (hudH + maxY) / 2 + yRatio * ((maxY - hudH) / 2);
+    }
     updateShipPosition();
   }
   async function enableTilt() {
@@ -2037,7 +2050,9 @@ function runCountdown(cb) {
   // 自機移動
   const moveShip = (e) => {
     if (gameOver || !startTime) return;
+    const hudH = 80;
     playerX = Math.max(32, Math.min(window.innerWidth - 32, e.clientX));
+    playerY = Math.max(hudH + 36, Math.min(window.innerHeight - 50, e.clientY));
     updateShipPosition();
   };
   document.getElementById('gameScreen').addEventListener('pointermove', moveShip);
