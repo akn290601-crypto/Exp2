@@ -454,9 +454,9 @@
     #playerShip {
       position: absolute;
       bottom: 30px;
-      left: calc(50% - 44px);
-      width: 88px;
-      height: 88px;
+      left: calc(50% - 56px);
+      width: 112px;
+      height: 112px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1004,7 +1004,7 @@
   /* ── Shooter ── */
   function updateShipPosition() {
     const ship = document.getElementById('playerShip');
-    if (ship) ship.style.left = (playerX - 44) + 'px';
+    if (ship) ship.style.left = (playerX - 56) + 'px';
   }
 
   function getFireInterval() {
@@ -1017,7 +1017,7 @@
   function fireBullet() {
     if (gameOver) return;
     const bw = 6, bh = 20;
-    const y = window.innerHeight - 30 - 88 - bh;
+    const y = window.innerHeight - 30 - 112 - bh;
     const makeEl = (x) => {
       const el = document.createElement('div');
       el.className = 'bullet';
@@ -1672,7 +1672,7 @@ function runCountdown(cb) {
 
     // スクロール完了後は画面全体をタップで続行（ユーザージェスチャ確保）
     const timer = setTimeout(() => {
-      skipBtn.textContent = '▶ タップして続ける';
+      skipBtn.textContent = '今　自由をかけた戦いが始まる';
       $story.onclick = proceed;
       $story.style.cursor = 'pointer';
     }, 13500);
