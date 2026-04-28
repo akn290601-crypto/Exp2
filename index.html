@@ -572,8 +572,8 @@
       perspective: 260px;
       perspective-origin: 50% 55%;
       overflow: hidden;
-      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 65%, transparent 100%);
-      mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 65%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 55%, transparent 75%);
+      mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 55%, transparent 75%);
     }
     #crawlText {
       position: absolute;
@@ -586,12 +586,12 @@
       text-align: center;
       text-shadow: 0 0 8px rgba(255,210,0,0.4);
       transform-origin: 50% 100%;
-      animation: crawl-move 10s linear 3s forwards;
-      transform: rotateX(28deg) translateY(69vh);
+      animation: crawl-move 14s linear 3s forwards;
+      transform: rotateX(28deg) translateY(100vh);
     }
     @keyframes crawl-move {
-      0%   { transform: rotateX(28deg) translateY(69vh); }
-      100% { transform: rotateX(28deg) translateY(-420%); }
+      0%   { transform: rotateX(28deg) translateY(100vh); }
+      100% { transform: rotateX(28deg) translateY(-300%); }
     }
     #storySkipBtn {
       position: absolute;
@@ -1665,7 +1665,7 @@ function runCountdown(cb) {
     // animationend でクロール完了を検知（確実）
     crawl.addEventListener('animationend', showProceed, { once: true });
     // フォールバック（animationendが発火しない場合）
-    const fallbackTimer = setTimeout(showProceed, 13500);
+    const fallbackTimer = setTimeout(showProceed, 17500);
 
     skipBtn.onclick = (e) => {
       e.stopPropagation();
