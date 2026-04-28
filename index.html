@@ -1125,12 +1125,12 @@
     if (currentStageNum === 1) {
       spawnEnemyBullet(ex, ey, nx, ny);
     } else if (currentStageNum === 2) {
-      [-0.22, 0, 0.22].forEach(a => {
+      [-0.2, 0.2].forEach(a => {
         const c = Math.cos(a), s = Math.sin(a);
         spawnEnemyBullet(ex, ey, nx*c - ny*s, nx*s + ny*c);
       });
     } else {
-      [-0.32, -0.16, 0, 0.16, 0.32].forEach(a => {
+      [-0.22, 0, 0.22].forEach(a => {
         const c = Math.cos(a), s = Math.sin(a);
         spawnEnemyBullet(ex, ey, nx*c - ny*s, nx*s + ny*c);
       });
