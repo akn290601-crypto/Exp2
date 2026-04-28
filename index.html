@@ -97,6 +97,48 @@
     }
     #gameScreen.shaking { animation: shake 0.3s ease; }
 
+    /* ヒットスパーク */
+    .hit-spark {
+      position: absolute;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fff 0%, #ffd200 50%, transparent 75%);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 50;
+      animation: hit-spark 0.18s ease-out forwards;
+    }
+    @keyframes hit-spark {
+      0%   { transform: translate(-50%, -50%) scale(0.3); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(3.0); opacity: 0; }
+    }
+    /* コンボ表示 */
+    .combo-text {
+      position: absolute;
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: #ff6600;
+      text-shadow: 0 0 8px rgba(255,100,0,0.8), 0 2px 4px rgba(0,0,0,0.6);
+      pointer-events: none;
+      z-index: 55;
+      animation: combo-pop 0.7s ease-out forwards;
+    }
+    @keyframes combo-pop {
+      0%   { transform: translate(-50%,-50%) scale(0.5); opacity: 1; }
+      40%  { transform: translate(-50%,-70%) scale(1.2); opacity: 1; }
+      100% { transform: translate(-50%,-120%) scale(0.9); opacity: 0; }
+    }
+    /* 撃破時の画面縁フラッシュ */
+    #hitRim {
+      position: absolute; inset: 0;
+      pointer-events: none; z-index: 48;
+      border-radius: 4px;
+      opacity: 0;
+      box-shadow: inset 0 0 40px rgba(255,220,0,0.7);
+      transition: opacity 0.04s;
+    }
+    #hitRim.active { opacity: 1; }
+
     #clearFlash {
       position: absolute;
       inset: 0;
@@ -587,10 +629,10 @@
       text-shadow: 0 0 8px rgba(255,210,0,0.4);
       transform-origin: 50% 100%;
       animation: crawl-move 14s linear 3s forwards;
-      transform: rotateX(28deg) translateY(100vh);
+      transform: rotateX(28deg) translateY(75vh);
     }
     @keyframes crawl-move {
-      0%   { transform: rotateX(28deg) translateY(100vh); opacity: 1; }
+      0%   { transform: rotateX(28deg) translateY(75vh); opacity: 1; }
       30%  { opacity: 1; }
       55%  { opacity: 0; }
       100% { transform: rotateX(28deg) translateY(-300%); opacity: 0; }
@@ -669,6 +711,7 @@
 <div class="screen hidden" id="gameScreen">
   <div id="clearFlash"></div>
   <div id="dangerOverlay"></div>
+  <div id="hitRim"></div>
   <div id="conquestMsg">
     <div class="cq-title">🌍 トキワ帝国</div>
     <div class="cq-main">地球征服<br>完了</div>
@@ -1005,6 +1048,55 @@
     setTimeout(() => el.remove(), isMilestone ? 1050 : 750);
   }
 
+  /* ── 爽快感エフェクト ── */
+  let hitRimTimer = null;
+  function flashHitRim() {
+    const rim = document.getElementById('hitRim');
+    if (!rim) return;
+    rim.classList.add('active');
+    clearTimeout(hitRimTimer);
+    hitRimTimer = setTimeout(() => rim.classList.remove('active'), 80);
+  }
+
+  function createHitSpark(x, y) {
+    const el = document.createElement('div');
+    el.className = 'hit-spark';
+    el.style.left = x + 'px';
+    el.style.top  = y + 'px';
+    $game.appendChild(el);
+    setTimeout(() => el.remove(), 220);
+  }
+
+  let comboCount = 0;
+  let comboTimer = null;
+  function showCombo(cx, cy) {
+    comboCount++;
+    clearTimeout(comboTimer);
+    comboTimer = setTimeout(() => { comboCount = 0; }, 1200);
+    if (comboCount < 3) return;
+    const el = document.createElement('div');
+    el.className = 'combo-text';
+    el.textContent = comboCount + ' COMBO!';
+    el.style.left = cx + 'px';
+    el.style.top  = cy + 'px';
+    $game.appendChild(el);
+    setTimeout(() => el.remove(), 750);
+  }
+
+  function playHitLight() {
+    try {
+      const ctx = getCtx(); if (!ctx) return;
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.connect(g); g.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(320, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + 0.06);
+      g.gain.setValueAtTime(0.18, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.07);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.07);
+    } catch (_) {}
+  }
+
   function createBurst(el) {
     const rect = el.getBoundingClientRect();
     const gr   = $game.getBoundingClientRect();
@@ -1166,8 +1258,14 @@
         const e = enemies[ei];
         if (e.el.classList.contains('bursting') || e.el.classList.contains('pre-burst')) continue;
         if (bx2 > e.x && bx1 < e.x + e.size && by2 > e.y && by1 < e.y + e.size) {
+          const hx = (bx1 + bx2) / 2, hy = (by1 + by2) / 2;
           b.el.remove(); bullets.splice(bi, 1);
           enemies.splice(ei, 1);
+          createHitSpark(hx, hy);
+          flashHitRim();
+          playHitLight();
+          showCombo(hx, hy - 20);
+          navigator.vibrate?.(18);
           triggerBurst(e.el);
           break;
         }
