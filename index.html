@@ -584,7 +584,7 @@
       text-align: center;
       text-shadow: 0 0 8px rgba(255,210,0,0.4);
       transform-origin: 50% 100%;
-      animation: crawl-move 7s linear 3s forwards;
+      animation: crawl-move 16s linear 3s forwards;
       transform: rotateX(28deg) translateY(110vh);
     }
     @keyframes crawl-move {
@@ -1727,7 +1727,7 @@ function runCountdown(cb) {
     // animationend でクロール完了を検知（確実）
     crawl.addEventListener('animationend', showProceed, { once: true });
     // フォールバック（animationendが発火しない場合）
-    const fallbackTimer = setTimeout(showProceed, 10500);
+    const fallbackTimer = setTimeout(showProceed, 19500);
 
     skipBtn.onclick = (e) => {
       e.stopPropagation();
