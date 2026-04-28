@@ -528,11 +528,11 @@
     /* 敵の弾 */
     .ebullet {
       position: absolute;
+      left: 0; top: 0;
       border-radius: 50%;
       pointer-events: none;
       z-index: 25;
-      transform: translate(-50%, -50%);
-      will-change: left, top;
+      will-change: transform;
     }
     .ebullet.s1 {
       width: 11px; height: 11px;
@@ -551,13 +551,15 @@
     /* ── Bullets ── */
     .bullet {
       position: absolute;
+      left: 0; top: 0;
       width: 6px;
       height: 20px;
       border-radius: 3px;
       background: linear-gradient(to top, #00ffee, #ffffff);
-      box-shadow: 0 0 8px 2px rgba(0,255,238,0.8);
+      box-shadow: 0 0 6px 1px rgba(0,255,238,0.7);
       pointer-events: none;
       z-index: 11;
+      will-change: transform;
     }
 
     /* ── Power-up items ── */
@@ -1101,11 +1103,10 @@
 
   /* ── 弾幕：敵の弾 ── */
   function spawnEnemyBullet(x, y, vx, vy) {
-    if (enemyBullets.length >= 80) return; // 上限キャップ
+    if (enemyBullets.length >= 40) return;
     const el = document.createElement('div');
     el.className = 'ebullet s' + currentStageNum;
-    el.style.left = x + 'px';
-    el.style.top  = y + 'px';
+    el.style.transform = `translate(${x}px,${y}px)`;
     $game.appendChild(el);
     enemyBullets.push({ el, x, y, vx, vy });
   }
@@ -1135,7 +1136,7 @@
       });
     }
 
-    const interval = Math.max(900, 2800 - (currentStageNum - 1) * 500 + (Math.random() - 0.5) * 800);
+    const interval = Math.max(1500, 3800 - (currentStageNum - 1) * 500 + (Math.random() - 0.5) * 800);
     if (!gameOver && enemy.el.isConnected) {
       enemy.shootTimer = setTimeout(() => enemyShoot(enemy), interval);
     }
@@ -1145,8 +1146,7 @@
     for (let i = enemyBullets.length - 1; i >= 0; i--) {
       const b = enemyBullets[i];
       b.x += b.vx; b.y += b.vy;
-      b.el.style.left = b.x + 'px';
-      b.el.style.top  = b.y + 'px';
+      b.el.style.transform = `translate(${b.x}px,${b.y}px)`;
       if (b.x < -20 || b.x > window.innerWidth + 20 || b.y < -20 || b.y > window.innerHeight + 20) {
         b.el.remove(); enemyBullets.splice(i, 1);
       }
@@ -1333,8 +1333,7 @@
     const makeEl = (x) => {
       const el = document.createElement('div');
       el.className = 'bullet';
-      el.style.left = (x - bw / 2) + 'px';
-      el.style.top  = y + 'px';
+      el.style.transform = `translate(${x - bw / 2}px,${y}px)`;
       $game.appendChild(el);
       return el;
     };
@@ -1365,8 +1364,7 @@
       const b = bullets[i];
       b.x += b.vx;
       b.y += b.vy;
-      b.el.style.left = b.x + 'px';
-      b.el.style.top  = b.y + 'px';
+      b.el.style.transform = `translate(${b.x}px,${b.y}px)`;
       if (b.y < -30) { b.el.remove(); bullets.splice(i, 1); }
     }
   }
@@ -1644,7 +1642,7 @@
     navigator.vibrate?.(50);
     setTimeout(() => {
       if (!el.isConnected) return;
-      createShatter(el);
+
       const { cx, cy } = createBurst(el);
       const isMilestone = (score + 1) % 10 === 0;
       playBurst(isMilestone);
