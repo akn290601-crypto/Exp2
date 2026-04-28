@@ -1100,16 +1100,16 @@
     const isSpread = powerUpActive && powerUpType === 'spread';
     const isLv2    = $game.classList.contains('fever-lv2');
     if (isLv2 && isSpread) {
-      [[-10,-8],[-5,-10],[0,-11],[5,-10],[10,-8]].forEach(([vx, vy]) => {
+      [[-5,-4],[-3,-5],[0,-6],[3,-5],[5,-4]].forEach(([vx, vy]) => {
         const el = makeEl(playerX); bullets.push({ el, x: playerX - bw/2, y, vx, vy });
       });
     } else if (isLv2 || isSpread) {
-      [[-8,-9],[0,-11],[8,-9]].forEach(([vx, vy]) => {
+      [[-4,-5],[0,-6],[4,-5]].forEach(([vx, vy]) => {
         const el = makeEl(playerX); bullets.push({ el, x: playerX - bw/2, y, vx, vy });
       });
     } else {
       const el = makeEl(playerX);
-      bullets.push({ el, x: playerX - bw / 2, y, vx: 0, vy: -11 });
+      bullets.push({ el, x: playerX - bw / 2, y, vx: 0, vy: -6 });
     }
   }
 
