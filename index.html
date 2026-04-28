@@ -506,7 +506,50 @@
       filter: drop-shadow(0 0 12px rgba(0,200,255,0.8));
       pointer-events: none;
       z-index: 12;
+      transition: opacity 0.1s;
     }
+    #playerShip.invincible { animation: player-blink 0.18s linear infinite; }
+    @keyframes player-blink {
+      0%,49% { opacity: 1; }
+      50%,100% { opacity: 0.25; }
+    }
+    /* 自機ヒットボックス（中央の小さい点） */
+    #playerHitbox {
+      position: absolute;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 6px #fff, 0 0 12px rgba(0,200,255,0.8);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 13;
+    }
+    /* 敵の弾 */
+    .ebullet {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 25;
+      transform: translate(-50%, -50%);
+    }
+    .ebullet.s1 {
+      width: 11px; height: 11px;
+      background: radial-gradient(circle, #ff8888 0%, #ff0000 65%, transparent 100%);
+      box-shadow: 0 0 6px #ff2200, 0 0 14px rgba(255,0,0,0.4);
+    }
+    .ebullet.s2 {
+      width: 11px; height: 11px;
+      background: radial-gradient(circle, #ee88ff 0%, #cc00ff 65%, transparent 100%);
+      box-shadow: 0 0 6px #bb00ff, 0 0 14px rgba(200,0,255,0.4);
+    }
+    .ebullet.s3 {
+      width: 13px; height: 13px;
+      background: radial-gradient(circle, #88eeff 0%, #0099ff 65%, transparent 100%);
+      box-shadow: 0 0 8px #0088ff, 0 0 18px rgba(0,100,255,0.5);
+    }
+    /* ライフ表示 */
+    #hudLives { font-size: 1.1rem; letter-spacing: 2px; }
     /* ── Bullets ── */
     .bullet {
       position: absolute;
@@ -724,11 +767,17 @@
     <div class="rc-title">🕊️ 和平成立</div>
     <div class="rc-main">和睦</div>
   </div>
-  <div id="playerShip"><img src="IMG_3754.png" draggable="false" style="width:100%;height:100%;object-fit:contain;border-radius:8px;"></div>
+  <div id="playerShip">
+    <img src="IMG_3754.png" draggable="false" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
+    <div id="playerHitbox"></div>
+  </div>
   <div id="powerUpLabel"></div>
   <div id="countdown"></div>
   <div class="game-hud">
-    <div class="hud-timer" id="hudTimer">28.00</div>
+    <div class="hud-timer" id="hudTimer">0.00</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+      <div id="hudLives">❤️❤️❤️</div>
+    </div>
     <div class="hud-right">
       <div class="hud-score"  id="hudScore">💥 0体撃破</div>
       <div class="hud-remain" id="hudRemain">残り 99体</div>
@@ -828,10 +877,14 @@
   let speedBoostCount      = 0;
   let speedBoostNextThresh = 5;
   let recentKillsSpeed     = [];
-  let playerX   = 0;
-  let bullets   = [];
-  let enemies   = [];
-  let fireTimer = null;
+  let playerX          = 0;
+  let bullets          = [];
+  let enemies          = [];
+  let enemyBullets     = [];
+  let playerLives      = 3;
+  let playerInvincible = false;
+  let invincibleTimer  = null;
+  let fireTimer        = null;
   let currentStageNum = 1;
   let totalScore      = 0;
   let totalElapsed    = 0;
@@ -1046,6 +1099,100 @@
     el.style.top  = (cy - 30) + 'px';
     $game.appendChild(el);
     setTimeout(() => el.remove(), isMilestone ? 1050 : 750);
+  }
+
+  /* ── 弾幕：敵の弾 ── */
+  function spawnEnemyBullet(x, y, vx, vy) {
+    const el = document.createElement('div');
+    el.className = 'ebullet s' + currentStageNum;
+    el.style.left = x + 'px';
+    el.style.top  = y + 'px';
+    $game.appendChild(el);
+    enemyBullets.push({ el, x, y, vx, vy });
+  }
+
+  function enemyShoot(enemy) {
+    if (gameOver || !enemy.el.isConnected || enemy.el.classList.contains('bursting')) return;
+    const ex = enemy.x + enemy.size / 2;
+    const ey = enemy.y + enemy.size / 2;
+    const px = playerX;
+    const py = window.innerHeight - 30 - 56;
+    const dx = px - ex, dy = py - ey;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const spd = 2.2 + (currentStageNum - 1) * 0.6;
+    const nx = dx / dist * spd, ny = dy / dist * spd;
+
+    if (currentStageNum === 1) {
+      spawnEnemyBullet(ex, ey, nx, ny);
+    } else if (currentStageNum === 2) {
+      [-0.22, 0, 0.22].forEach(a => {
+        const c = Math.cos(a), s = Math.sin(a);
+        spawnEnemyBullet(ex, ey, nx*c - ny*s, nx*s + ny*c);
+      });
+    } else {
+      [-0.32, -0.16, 0, 0.16, 0.32].forEach(a => {
+        const c = Math.cos(a), s = Math.sin(a);
+        spawnEnemyBullet(ex, ey, nx*c - ny*s, nx*s + ny*c);
+      });
+    }
+
+    const interval = Math.max(900, 2800 - (currentStageNum - 1) * 500 + (Math.random() - 0.5) * 800);
+    if (!gameOver && enemy.el.isConnected) {
+      enemy.shootTimer = setTimeout(() => enemyShoot(enemy), interval);
+    }
+  }
+
+  function updateEnemyBullets() {
+    for (let i = enemyBullets.length - 1; i >= 0; i--) {
+      const b = enemyBullets[i];
+      b.x += b.vx; b.y += b.vy;
+      b.el.style.left = b.x + 'px';
+      b.el.style.top  = b.y + 'px';
+      if (b.x < -20 || b.x > window.innerWidth + 20 || b.y < -20 || b.y > window.innerHeight + 20) {
+        b.el.remove(); enemyBullets.splice(i, 1);
+      }
+    }
+  }
+
+  function updateLivesHUD() {
+    const el = document.getElementById('hudLives');
+    if (el) el.textContent = '❤️'.repeat(Math.max(0, playerLives));
+  }
+
+  function checkPlayerHit() {
+    if (playerInvincible || gameOver) return;
+    const phx = playerX;
+    const phy = window.innerHeight - 30 - 56;
+    const hitR = 12;
+    for (let i = enemyBullets.length - 1; i >= 0; i--) {
+      const b = enemyBullets[i];
+      const d = Math.sqrt((phx - b.x) ** 2 + (phy - b.y) ** 2);
+      if (d < hitR + 6) {
+        b.el.remove(); enemyBullets.splice(i, 1);
+        loseLife();
+        break;
+      }
+    }
+  }
+
+  function loseLife() {
+    playerLives--;
+    updateLivesHUD();
+    navigator.vibrate?.([80, 40, 80]);
+    shakeScreen();
+    const ship = document.getElementById('playerShip');
+    ship.classList.add('invincible');
+    playerInvincible = true;
+    clearTimeout(invincibleTimer);
+    invincibleTimer = setTimeout(() => {
+      ship.classList.remove('invincible');
+      playerInvincible = false;
+    }, 2200);
+    if (playerLives <= 0) {
+      gameOver = true; gameWon = false;
+      stopSpawn(); stopTimer();
+      setTimeout(() => endGame(), 400);
+    }
   }
 
   /* ── 爽快感エフェクト ── */
@@ -1424,9 +1571,11 @@
       document.getElementById('hudTimer').textContent = elapsed.toFixed(2);
       updateBullets();
       updateEnemies();
+      updateEnemyBullets();
       updatePowerItems();
       checkCollisions();
       checkPowerCollisions();
+      checkPlayerHit();
     }
     rafId = requestAnimationFrame(tickTimer);
   }
@@ -1480,12 +1629,18 @@
     el.classList.add('spawning');
     el.addEventListener('animationend', () => el.classList.remove('spawning'), { once: true });
     $game.appendChild(el);
-    enemies.push({ el, x, y, vx, vy, size: itemSize });
+    const enemy = { el, x, y, vx, vy, size: itemSize, shootTimer: null };
+    enemies.push(enemy);
+    const shootDelay = 1200 + Math.random() * 1500;
+    enemy.shootTimer = setTimeout(() => enemyShoot(enemy), shootDelay);
   }
 
   function triggerBurst(el) {
     if (gameOver) return;
     if (el.classList.contains('bursting') || el.classList.contains('pre-burst')) return;
+    // 射撃タイマー停止
+    const eObj = enemies.find(e => e.el === el);
+    if (eObj) clearTimeout(eObj.shootTimer);
     el.classList.add('pre-burst');
     navigator.vibrate?.(50);
     setTimeout(() => {
@@ -1570,7 +1725,7 @@ function runCountdown(cb) {
     startTime      = null;
     feverMode        = false;
     recentKills      = [];
-    if (stageNum === 1) { totalScore = 0; totalElapsed = 0; }
+    if (stageNum === 1) { totalScore = 0; totalElapsed = 0; playerLives = 3; updateLivesHUD(); }
     gameEndType          = '';
     speedBoostCount      = 0;
     speedBoostNextThresh = 5;
@@ -1582,11 +1737,15 @@ function runCountdown(cb) {
     fireTimer = null; powerUpTimer = null; powerSpawnTimer = null;
     powerUpActive = false; powerUpType = null;
     bullets.forEach(b => b.el.remove()); bullets = [];
-    enemies.forEach(e => { if (e.el.isConnected) e.el.remove(); }); enemies = [];
+    enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
+    enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
     powerItems.forEach(p => { if (p.el.isConnected) p.el.remove(); }); powerItems = [];
-    $game.querySelectorAll('.bullet,.power-item').forEach(e => e.remove());
+    $game.querySelectorAll('.bullet,.power-item,.ebullet').forEach(e => e.remove());
     document.getElementById('powerUpLabel').className = '';
     $game.classList.remove('fever', 'fever-lv2');
+    clearTimeout(invincibleTimer);
+    playerInvincible = false;
+    document.getElementById('playerShip').classList.remove('invincible');
     stopTimer();
     stopSpawn();
 
@@ -1620,9 +1779,13 @@ function runCountdown(cb) {
     clearTimeout(fireTimer); clearTimeout(powerSpawnTimer); clearTimeout(powerUpTimer);
     fireTimer = null; powerSpawnTimer = null;
     bullets.forEach(b => b.el.remove()); bullets = [];
-    enemies.forEach(e => { if (e.el.isConnected) e.el.remove(); }); enemies = [];
+    enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
+    enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
     powerItems.forEach(p => { if (p.el.isConnected) p.el.remove(); }); powerItems = [];
-    $game.querySelectorAll('.tap-item,.particle').forEach(e => e.remove());
+    $game.querySelectorAll('.tap-item,.particle,.ebullet').forEach(e => e.remove());
+    clearTimeout(invincibleTimer);
+    playerInvincible = false;
+    document.getElementById('playerShip').classList.remove('invincible');
     document.getElementById('dangerOverlay').classList.remove('active');
     stopBGM();
 
