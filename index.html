@@ -593,6 +593,33 @@
       0%   { transform: rotateX(28deg) translateY(100vh); }
       100% { transform: rotateX(28deg) translateY(-300%); }
     }
+    #storyLogo {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 20;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1.4s ease-in;
+    }
+    #storyLogo.visible { opacity: 1; }
+    #storyLogo .logo-title {
+      font-size: 2.6rem;
+      font-weight: 900;
+      color: #ffd200;
+      letter-spacing: 0.12em;
+      text-shadow: 0 0 18px rgba(255,210,0,0.9), 0 0 40px rgba(255,120,0,0.6), 0 2px 8px rgba(0,0,0,0.8);
+      line-height: 1.4;
+    }
+    #storyLogo .logo-sub {
+      font-size: 1.0rem;
+      color: #ffeeaa;
+      letter-spacing: 0.25em;
+      margin-top: 0.5em;
+      text-shadow: 0 0 10px rgba(255,210,0,0.5);
+    }
     #storySkipBtn {
       position: absolute;
       bottom: max(40px, env(safe-area-inset-bottom) + 20px);
@@ -691,6 +718,10 @@
       <br><br>
       <p>パラレル世界の<br>トキワである。</p>
     </div>
+  </div>
+  <div id="storyLogo">
+    <div class="logo-title">トキワ帝国の野望</div>
+    <div class="logo-sub">TOKIWA EMPIRE AMBITION</div>
   </div>
   <button class="btn btn-secondary" id="storySkipBtn">スキップ ▶</button>
 </div>
@@ -1658,8 +1689,11 @@ function runCountdown(cb) {
     const intro   = document.getElementById('storyIntro');
     const skipBtn = document.getElementById('storySkipBtn');
 
+    const logoEl = document.getElementById('storyLogo');
+
     // アニメーションをリセット
     [crawl, intro].forEach(el => { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; });
+    logoEl.classList.remove('visible');
     skipBtn.textContent = 'スキップ ▶';
     skipBtn.className = 'btn btn-secondary';
     $story.style.cursor = 'default';
@@ -1667,6 +1701,8 @@ function runCountdown(cb) {
 
     // クロール開始（3s遅延）と同タイミングでBGM再生
     setTimeout(() => playStoryBgm(), 2000);
+    // クロール開始10秒後にロゴ表示（3s + 10s = 13s）
+    const logoTimer = setTimeout(() => logoEl.classList.add('visible'), 13000);
 
     const showProceed = () => {
       skipBtn.textContent = '今　自由をかけた戦いが始まる';
@@ -1678,6 +1714,8 @@ function runCountdown(cb) {
     const proceed = () => {
       $story.onclick = null;
       clearTimeout(fallbackTimer);
+      clearTimeout(logoTimer);
+      logoEl.classList.remove('visible');
       stopStoryBgm();
       onDone();
     };
