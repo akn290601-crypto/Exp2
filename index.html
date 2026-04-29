@@ -1869,6 +1869,7 @@ function runCountdown(cb) {
     const showProceed = () => {
       skipBtn.textContent = '今　自由をかけた戦いが始まる';
       skipBtn.className = 'btn btn-primary proceed';
+      skipBtn.onclick = (e) => { e.stopPropagation(); proceed(); };
       $story.onclick = proceed;
       $story.style.cursor = 'pointer';
     };
@@ -1883,9 +1884,8 @@ function runCountdown(cb) {
       onDone();
     };
 
-    // animationend でクロール完了を検知（確実）
     crawl.addEventListener('animationend', showProceed, { once: true });
-    const fallbackTimer = setTimeout(showProceed, 23500);
+    const fallbackTimer = setTimeout(showProceed, 21500);
 
     skipBtn.onclick = (e) => {
       e.stopPropagation();
