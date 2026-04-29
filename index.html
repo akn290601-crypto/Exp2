@@ -1533,9 +1533,10 @@
 
     let itemSize = SIZE;
     let vy;
+    let src = null;
     if (heroImgSrcs.length > 0) {
       const pool = heroImgSrcs.filter(s => cfg.srcs.includes(s));
-      const src  = (pool.length > 0 ? pool : heroImgSrcs)[Math.floor(Math.random() * (pool.length || heroImgSrcs.length))];
+      src = (pool.length > 0 ? pool : heroImgSrcs)[Math.floor(Math.random() * (pool.length || heroImgSrcs.length))];
       itemSize = Math.round(SIZE * 0.72);
       el.dataset.src = src;
       const img = document.createElement('img');
