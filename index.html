@@ -413,7 +413,6 @@
       cursor: pointer;
       transform-origin: center;
       -webkit-tap-highlight-color: transparent;
-      border-radius: 12px;
     }
     .tap-item img {
       width: 100%;
@@ -1861,7 +1860,7 @@ function runCountdown(cb) {
     $story.onclick = null;
 
     // クロール開始（3s遅延）と同タイミングでBGM再生
-    setTimeout(() => playStoryBgm(), 2000);
+    const bgmTimer  = setTimeout(() => playStoryBgm(), 2000);
     // クロール開始7秒後にロゴ表示（3s + 7s = 10s）
     const logoTimer = setTimeout(() => logoEl.classList.add('visible'), 11000);
 
@@ -1875,6 +1874,7 @@ function runCountdown(cb) {
     const proceed = () => {
       $story.onclick = null;
       clearTimeout(fallbackTimer);
+      clearTimeout(bgmTimer);
       clearTimeout(logoTimer);
       logoEl.classList.remove('visible');
       stopStoryBgm();
