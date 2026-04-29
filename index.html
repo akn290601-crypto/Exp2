@@ -930,6 +930,7 @@
   }
   function startBGM() {
     clearInterval(bgmFadeTimer);
+    bgmAudio.loop = true;
     bgmAudio.volume = 0.5;
     bgmAudio.currentTime = 0;
     bgmAudio.play().catch(() => {});
