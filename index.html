@@ -1799,8 +1799,6 @@ function runCountdown(cb) {
     setTimeout(() => playStageUp(), 100);
     runCountdown(() => {
       startTime     = Date.now();
-      tiltSmoothed  = null;
-      tiltYSmoothed = null;
       playerX       = window.innerWidth / 2;
       playerY       = window.innerHeight - 80;
       updateShipPosition();
@@ -2040,43 +2038,8 @@ function runCountdown(cb) {
     };
   }
 
-  /* ── 傾き操作 ── */
-  let tiltSmoothed  = null;
-  let tiltYSmoothed = null;
-  function handleTilt(e) {
-    if (gameOver || !startTime) return;
-    const gamma = e.gamma;
-    const beta  = e.beta;
-    if (gamma !== null) {
-      tiltSmoothed = tiltSmoothed === null ? gamma : tiltSmoothed * 0.65 + gamma * 0.35;
-      const range = 28;
-      const ratio = Math.max(-1, Math.min(1, tiltSmoothed / range));
-      playerX = window.innerWidth / 2 + ratio * (window.innerWidth / 2 - 40);
-    }
-    if (beta !== null) {
-      tiltYSmoothed = tiltYSmoothed === null ? beta : tiltYSmoothed * 0.65 + beta * 0.35;
-      const betaNorm = tiltYSmoothed - 90;
-      const yRatio   = Math.max(-1, Math.min(1, betaNorm / 25));
-      const hudH = 80, maxY = window.innerHeight - 60;
-      playerY = (hudH + maxY) / 2 + yRatio * ((maxY - hudH) / 2);
-    }
-    updateShipPosition();
-  }
-  async function enableTilt() {
-    if (typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
-      try {
-        const state = await DeviceOrientationEvent.requestPermission();
-        if (state === 'granted') window.addEventListener('deviceorientation', handleTilt);
-      } catch (_) {}
-    } else if (typeof DeviceOrientationEvent !== 'undefined') {
-      window.addEventListener('deviceorientation', handleTilt);
-    }
-  }
-
   document.getElementById('startBtn').addEventListener('click', () => {
     initAudio(); unlockBGM();
-    enableTilt();
     showStory(() => playIntroVideo(() => startGame()));
   });
   document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); startGame(); });
