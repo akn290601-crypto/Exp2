@@ -792,7 +792,7 @@
     <div class="rc-main">和睦</div>
   </div>
   <div id="playerShip">
-    <img src="IMG_3754.png" draggable="false" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
+    <img src="IMG_3774.png" draggable="false" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
     <div id="playerHitbox"></div>
   </div>
   <div id="powerUpLabel"></div>
@@ -879,11 +879,11 @@
   const INITIAL_SPAWN     = 2;
   const STAGE_CONFIGS = [
     { num: 1, label: 'STAGE 1', quota: 20, spawnLimit: 20,
-      srcs: ['IMG_3755.png','IMG_3756.png','IMG_3757.png'], vyMin: 0.4, vyMax: 0.8 },
+      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.4, vyMax: 0.8 },
     { num: 2, label: 'STAGE 2', quota: 30, spawnLimit: 30,
-      srcs: ['IMG_3755.png','IMG_3756.png','IMG_3757.png','IMG_3716.png','IMG_3751.png'], vyMin: 0.6, vyMax: 1.1 },
+      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.6, vyMax: 1.1 },
     { num: 3, label: 'STAGE 3', quota: 40, spawnLimit: 40,
-      srcs: ['IMG_3755.png','IMG_3756.png','IMG_3757.png','IMG_3716.png','IMG_3751.png','IMG_3753.png'], vyMin: 0.9, vyMax: 1.5 },
+      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.9, vyMax: 1.5 },
   ];
 
   let heroImgSrcs    = [];
@@ -1638,8 +1638,7 @@
     if (heroImgSrcs.length > 0) {
       const pool = heroImgSrcs.filter(s => cfg.srcs.includes(s));
       const src  = (pool.length > 0 ? pool : heroImgSrcs)[Math.floor(Math.random() * (pool.length || heroImgSrcs.length))];
-      if (src === 'IMG_3716.png') itemSize = Math.round(SIZE * 1.28);
-      else itemSize = Math.round(SIZE * 0.72);
+      itemSize = Math.round(SIZE * 0.72);
       el.dataset.src = src;
       const img = document.createElement('img');
       img.src = src; img.draggable = false;
