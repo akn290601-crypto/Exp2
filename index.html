@@ -747,12 +747,6 @@
     }
 
     /* ── Video screen ── */
-    #videoScreen {
-      background: #000;
-      padding: 0;
-      cursor: pointer;
-    }
-
     /* ── Stage result screen ── */
     #stageResultScreen {
       background: radial-gradient(ellipse at center, #0a1a3a 0%, #050d1e 100%);
@@ -857,13 +851,6 @@
   </div>
 </div>
 
-<!-- ⑥ イントロ動画 -->
-<div class="screen hidden" id="videoScreen">
-  <video id="introVideo" src="Movie.mp4"
-    playsinline webkit-playsinline
-    style="width:100%;height:100%;object-fit:contain;background:#000;">
-  </video>
-</div>
 
 <audio id="bgm" src="ms.mp3" preload="auto"></audio>
 
@@ -925,21 +912,9 @@
   const $result     = document.getElementById('resultScreen');
   const $story      = document.getElementById('storyScreen');
   const $stageResult= document.getElementById('stageResultScreen');
-  const $video      = document.getElementById('videoScreen');
-
   function showScreen(el) {
-    [$name, $game, $result, $story, $stageResult, $video].forEach(s => s.classList.add('hidden'));
+    [$name, $game, $result, $story, $stageResult].forEach(s => s.classList.add('hidden'));
     el.classList.remove('hidden');
-  }
-
-  function playIntroVideo(onDone) {
-    const vid = document.getElementById('introVideo');
-    showScreen($video);
-    vid.currentTime = 0;
-    vid.play().catch(() => onDone());
-    vid.onended = () => onDone();
-    vid.onerror = () => onDone();
-    $video.onclick = () => { vid.pause(); vid.onended = null; onDone(); };
   }
 
   /* ── BGM ── */
@@ -2039,7 +2014,7 @@ function runCountdown(cb) {
 
   document.getElementById('startBtn').addEventListener('click', () => {
     initAudio(); unlockBGM();
-    showStory(() => playIntroVideo(() => startGame()));
+    showStory(() => startGame());
   });
   document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); startGame(); });
   document.getElementById('nextStageBtn').addEventListener('click', () => {
