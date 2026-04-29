@@ -868,11 +868,11 @@
   const INITIAL_SPAWN     = 3;
   const STAGE_TIME_S      = 45;
   const STAGE_CONFIGS = [
-    { num: 1, label: 'STAGE 1', spawnLimit: 999,
+    { num: 1, label: 'STAGE 1', spawnLimit: 15,
       srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.4, vyMax: 0.8 },
-    { num: 2, label: 'STAGE 2', spawnLimit: 999,
+    { num: 2, label: 'STAGE 2', spawnLimit: 25,
       srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.6, vyMax: 1.1 },
-    { num: 3, label: 'STAGE 3', spawnLimit: 999,
+    { num: 3, label: 'STAGE 3', spawnLimit: 35,
       srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.9, vyMax: 1.5 },
   ];
 
@@ -1507,6 +1507,8 @@
       if (remaining <= 0 && !gameOver) {
         gameOver = true; gameWon = true;
         stopSpawn(); stopTimer();
+        enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
+        enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
         setTimeout(() => endGame(), 300);
         return;
       }
@@ -1885,7 +1887,7 @@ function runCountdown(cb) {
     };
 
     crawl.addEventListener('animationend', showProceed, { once: true });
-    const fallbackTimer = setTimeout(showProceed, 21500);
+    const fallbackTimer = setTimeout(showProceed, 14000);
 
     skipBtn.onclick = (e) => {
       e.stopPropagation();
