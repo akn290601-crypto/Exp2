@@ -861,7 +861,7 @@
   const TAPS_MAX          = 1;
   const SIZE              = 90;
   const MEDALS            = ['🥇','🥈','🥉'];
-  const HERO_SRCS         = ['IMG_3716.png','IMG_3754.png','IMG_3755.png','IMG_3756.png','IMG_3757.png'];
+  const HERO_SRCS = ['IMG_3775.png','IMG_3776.png','IMG_3777.png'];
   const SPAWN_INTERVAL_MS = 700;
   const INITIAL_SPAWN     = 2;
   const STAGE_CONFIGS = [
@@ -1156,7 +1156,14 @@
 
   function updateLivesHUD() {
     const el = document.getElementById('hudLives');
-    if (el) el.textContent = '❤️'.repeat(Math.max(0, playerLives));
+    if (!el) return;
+    el.innerHTML = '';
+    for (let i = 0; i < Math.max(0, playerLives); i++) {
+      const img = document.createElement('img');
+      img.src = 'IMG_3774.png';
+      img.style.cssText = 'width:22px;height:22px;object-fit:contain;vertical-align:middle;';
+      el.appendChild(img);
+    }
   }
 
   function checkPlayerHit() {
