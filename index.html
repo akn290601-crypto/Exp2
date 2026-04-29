@@ -862,14 +862,15 @@
   const SIZE              = 90;
   const MEDALS            = ['🥇','🥈','🥉'];
   const HERO_SRCS = ['IMG_3775.png','IMG_3776.png','IMG_3777.png'];
-  const SPAWN_INTERVAL_MS = 700;
-  const INITIAL_SPAWN     = 2;
+  const SPAWN_INTERVAL_MS = 500;
+  const INITIAL_SPAWN     = 3;
+  const STAGE_TIME_S      = 45;
   const STAGE_CONFIGS = [
-    { num: 1, label: 'STAGE 1', quota: 20, spawnLimit: 20,
+    { num: 1, label: 'STAGE 1', spawnLimit: 999,
       srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.4, vyMax: 0.8 },
-    { num: 2, label: 'STAGE 2', quota: 30, spawnLimit: 30,
+    { num: 2, label: 'STAGE 2', spawnLimit: 999,
       srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.6, vyMax: 1.1 },
-    { num: 3, label: 'STAGE 3', quota: 40, spawnLimit: 40,
+    { num: 3, label: 'STAGE 3', spawnLimit: 999,
       srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.9, vyMax: 1.5 },
   ];
 
@@ -1585,8 +1586,13 @@
 /* ── タイマー ── */
   function tickTimer() {
     if (!gameOver) {
-      const elapsed = startTime ? (Date.now() - startTime) / 1000 : 0;
-      document.getElementById('hudTimer').textContent = elapsed.toFixed(2);
+      const elapsed    = startTime ? (Date.now() - startTime) / 1000 : 0;
+      const remaining  = Math.max(0, STAGE_TIME_S - elapsed);
+      const timerEl    = document.getElementById('hudTimer');
+      timerEl.textContent = Math.ceil(remaining);
+      if (remaining <= 10) { timerEl.classList.remove('orange'); timerEl.classList.add('red'); }
+      else if (remaining <= 20) { timerEl.classList.remove('red'); timerEl.classList.add('orange'); }
+      else { timerEl.classList.remove('orange','red'); }
       updateBullets();
       updateEnemies();
       updateEnemyBullets();
@@ -1594,6 +1600,12 @@
       checkCollisions();
       checkPowerCollisions();
       checkPlayerHit();
+      if (remaining <= 0 && !gameOver) {
+        gameOver = true; gameWon = true;
+        stopSpawn(); stopTimer();
+        setTimeout(() => endGame(), 300);
+        return;
+      }
     }
     rafId = requestAnimationFrame(tickTimer);
   }
@@ -1674,16 +1686,7 @@
       checkSpeedBoost();
       const cfg = STAGE_CONFIGS[currentStageNum - 1];
       showFloatScore(cx, cy, score);
-      document.getElementById('hudScore').textContent  = `💥 ${score}体撃破`;
-      document.getElementById('hudRemain').textContent = `残り ${Math.max(0, cfg.quota - score)}体`;
-      if (score >= cfg.quota) {
-        gameWon = true; gameOver = true;
-        stopSpawn(); stopTimer();
-        // 残り敵を即時消去
-        enemies.forEach(e => { if (e.el.isConnected) e.el.remove(); }); enemies = [];
-        setTimeout(() => { if (el.isConnected) el.remove(); endGame(); }, 430);
-        return;
-      }
+      document.getElementById('hudScore').textContent = `💥 ${score}体撃破`;
       setTimeout(() => el.remove(), 430);
     }, 80);
   }
@@ -1773,7 +1776,7 @@ function runCountdown(cb) {
     timerEl.textContent = '0.00';
     timerEl.classList.remove('orange','red');
     document.getElementById('hudScore').textContent  = '💥 0体撃破';
-    document.getElementById('hudRemain').textContent = `残り ${cfg.quota}体`;
+    document.getElementById('hudRemain').textContent = '';
 
     showScreen($game);
     showStageLabel(cfg.label);
@@ -1809,39 +1812,29 @@ function runCountdown(cb) {
     document.getElementById('dangerOverlay').classList.remove('active');
     stopBGM();
 
-    const stageElapsed = startTime ? (Date.now() - startTime) / 1000 : 99;
-    totalScore  += score;
-    totalElapsed += stageElapsed;
+    totalScore += score;
 
-    // ステージクリア → 次ステージへ
-    if (gameWon && currentStageNum < STAGE_CONFIGS.length) {
+    // ライフ切れ → ゲームオーバー（即リザルト）
+    if (!gameWon) {
+      gameEndType = 'lose';
+      showResult();
+      return;
+    }
+
+    // タイムアップ → ステージ結果 or 最終リザルト
+    if (currentStageNum < STAGE_CONFIGS.length) {
       playClear();
-      showStageResult(true, stageElapsed);
+      showStageResult(true, 0);
       return;
     }
 
-    // 0体（ステージ1のみ判定）
-    if (!gameWon && currentStageNum === 1 && score === 0) {
-      gameEndType = 'conquest';
-      const msg = document.getElementById('conquestMsg');
-      msg.classList.add('show');
-      setTimeout(() => {
-        msg.classList.remove('show'); msg.classList.add('hide');
-        setTimeout(() => { msg.classList.remove('hide'); showResult(); }, 520);
-      }, 2200);
-      return;
-    }
-
-    // 全ステージクリア or 失敗
-    if (gameWon && currentStageNum === STAGE_CONFIGS.length) {
-      gameEndType = totalElapsed < 55 ? 'overwhelm' : 'win';
+    // 全ステージ終了
+    {
+      gameEndType = 'win';
       playClear();
       const flash = document.getElementById('clearFlash');
       flash.classList.remove('flashing'); void flash.offsetWidth; flash.classList.add('flashing');
       setTimeout(() => showResult(), 500);
-    } else {
-      gameEndType = 'lose';
-      showStageResult(false, stageElapsed);
     }
   }
 
@@ -1851,12 +1844,12 @@ function runCountdown(cb) {
     document.getElementById('stgResTitle').textContent = won ? 'CLEAR！' : 'FAILED';
     document.getElementById('stgResTitle').style.color = won ? '#ffd200' : '#ff3300';
     document.getElementById('stgResScore').textContent = score;
-    document.getElementById('stgResDetail').textContent = `体撃破 / 目標 ${cfg.quota}体`;
-    document.getElementById('stgResTime').textContent  = `クリアタイム ${elapsed.toFixed(1)}秒`;
-    if (won) {
+    document.getElementById('stgResDetail').textContent = '体撃破';
+    document.getElementById('stgResTime').textContent  = '';
+    if (currentStageNum < STAGE_CONFIGS.length) {
       document.getElementById('nextStageBtn').textContent = `STAGE ${currentStageNum + 1} へ ▶`;
     } else {
-      document.getElementById('nextStageBtn').textContent = 'もう一度 ▶';
+      document.getElementById('nextStageBtn').textContent = '結果を見る ▶';
     }
     showScreen($stageResult);
   }
@@ -1871,13 +1864,12 @@ function runCountdown(cb) {
     list.sort((a, b) => {
       if (a.won && !b.won) return -1;
       if (!a.won && b.won) return 1;
-      if (a.won && b.won) return a.time - b.time; // タイム短い順
-      return b.score - a.score;                   // 撃破数多い順
+      return b.score - a.score; // 撃破数多い順
     });
     localStorage.setItem('tg_v3', JSON.stringify(list.slice(0, 20)));
   }
-  function wonRankOf(elapsed) {
-    return loadScores().filter(r => r.won && r.time < elapsed).length + 1;
+  function scoreRankOf(count) {
+    return loadScores().filter(r => r.score > count).length + 1;
   }
   function renderLb(id) {
     const el  = document.getElementById(id);
@@ -1923,28 +1915,16 @@ function runCountdown(cb) {
 
   /* ── リザルト ── */
   function showResult() {
-    const elapsed = totalElapsed;
     saveEnding(gameEndType);
-    if (gameWon) {
-      const rank = wonRankOf(elapsed);
-      saveScore(true, elapsed, totalScore);
-      document.getElementById('resLogo').textContent  = '🎉';
-      document.getElementById('resTitle').textContent = gameEndType === 'overwhelm' ? '圧倒的勝利！' : 'WIN';
-      document.getElementById('resTitle').className   = 'result-win';
-      document.getElementById('resScore').textContent = elapsed.toFixed(1);
-      document.getElementById('resLabel').textContent = '秒で全ステージクリア！';
-      const labels = { 1:'🥇 最速記録！', 2:'🥈 2位！', 3:'🥉 3位！' };
-      document.getElementById('resRank').textContent  = labels[rank] || `第${rank}位`;
-    } else {
-      saveScore(false, null, totalScore);
-      document.getElementById('resLogo').textContent  = '💀';
-      document.getElementById('resTitle').textContent = 'LOSE';
-      document.getElementById('resTitle').className   = 'result-lose';
-      document.getElementById('resScore').textContent = totalScore;
-      document.getElementById('resLabel').textContent = `体撃破（STAGE ${currentStageNum} 失敗）`;
-      const msg = totalScore < 10 ? 'ファイト！' : totalScore < 25 ? 'もう少し！' : 'あと一歩！';
-      document.getElementById('resRank').textContent  = msg;
-    }
+    saveScore(gameWon, null, totalScore);
+    const rank = scoreRankOf(totalScore);
+    document.getElementById('resLogo').textContent  = gameWon ? '🎉' : '💀';
+    document.getElementById('resTitle').textContent = gameWon ? '全ステージ完了！' : 'GAME OVER';
+    document.getElementById('resTitle').className   = gameWon ? 'result-win' : 'result-lose';
+    document.getElementById('resScore').textContent = totalScore;
+    document.getElementById('resLabel').textContent = '体撃破';
+    const labels = { 1:'🥇 最多記録！', 2:'🥈 2位！', 3:'🥉 3位！' };
+    document.getElementById('resRank').textContent  = labels[rank] || `第${rank}位`;
     renderLb('resLb');
     renderEndingHistory('resEndingHistory');
     showScreen($result);
