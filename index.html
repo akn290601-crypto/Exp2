@@ -404,6 +404,7 @@
     .tap-item.spawning { animation: spawn-in 0.22s cubic-bezier(0.34,1.56,0.64,1) forwards; }
 
 /* ── Tap items ── */
+    .tap-item.hit-flash { filter: brightness(3) saturate(0); }
     .tap-item {
       position: absolute;
       display: flex;
@@ -1121,18 +1122,24 @@
     const spd = 2.2 + (currentStageNum - 1) * 0.6;
     const nx = dx / dist * spd, ny = dy / dist * spd;
 
-    if (currentStageNum === 1) {
+    const firePattern = (angles) => angles.forEach(a => {
+      const c = Math.cos(a), s = Math.sin(a);
+      spawnEnemyBullet(ex, ey, nx*c - ny*s, nx*s + ny*c);
+    });
+
+    if (enemy.src === 'IMG_3776.png') {
+      // 金髪：二連射
+      spawnEnemyBullet(ex, ey, nx, ny);
+      setTimeout(() => {
+        if (!gameOver && enemy.el.isConnected)
+          spawnEnemyBullet(ex, ey, nx, ny);
+      }, 200);
+    } else if (currentStageNum === 1) {
       spawnEnemyBullet(ex, ey, nx, ny);
     } else if (currentStageNum === 2) {
-      [-0.22, 0, 0.22].forEach(a => {
-        const c = Math.cos(a), s = Math.sin(a);
-        spawnEnemyBullet(ex, ey, nx*c - ny*s, nx*s + ny*c);
-      });
+      firePattern([-0.22, 0, 0.22]);
     } else {
-      [-0.33, -0.11, 0.11, 0.33].forEach(a => {
-        const c = Math.cos(a), s = Math.sin(a);
-        spawnEnemyBullet(ex, ey, nx*c - ny*s, nx*s + ny*c);
-      });
+      firePattern([-0.33, -0.11, 0.11, 0.33]);
     }
 
     const interval = Math.max(1500, 3800 - (currentStageNum - 1) * 500 + (Math.random() - 0.5) * 800);
@@ -1404,13 +1411,19 @@
         if (bx2 > e.x && bx1 < e.x + e.size && by2 > e.y && by1 < e.y + e.size) {
           const hx = (bx1 + bx2) / 2, hy = (by1 + by2) / 2;
           b.el.remove(); bullets.splice(bi, 1);
-          enemies.splice(ei, 1);
           createHitSpark(hx, hy);
           flashHitRim();
           playHitLight();
-          showCombo(hx, hy - 20);
           navigator.vibrate?.(18);
-          triggerBurst(e.el);
+          e.hp = (e.hp || 1) - 1;
+          if (e.hp <= 0) {
+            enemies.splice(ei, 1);
+            showCombo(hx, hy - 20);
+            triggerBurst(e.el);
+          } else {
+            e.el.classList.add('hit-flash');
+            setTimeout(() => e.el.classList.remove('hit-flash'), 150);
+          }
           break;
         }
       }
@@ -1549,7 +1562,8 @@
     el.classList.add('spawning');
     el.addEventListener('animationend', () => el.classList.remove('spawning'), { once: true });
     $game.appendChild(el);
-    const enemy = { el, x, y, vx, vy, size: itemSize, shootTimer: null };
+    const hp = src === 'IMG_3775.png' ? 2 : 1;
+    const enemy = { el, x, y, vx, vy, size: itemSize, shootTimer: null, src, hp };
     enemies.push(enemy);
     const shootDelay = 1200 + Math.random() * 1500;
     enemy.shootTimer = setTimeout(() => enemyShoot(enemy), shootDelay);
