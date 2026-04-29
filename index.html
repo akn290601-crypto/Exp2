@@ -904,11 +904,6 @@
   let currentStageNum = 1;
   let totalScore      = 0;
   let totalElapsed    = 0;
-  let powerUpActive = false;
-  let powerUpType   = null;
-  let powerUpTimer  = null;
-  let powerItems    = [];
-  let powerSpawnTimer = null;
 
   const $name       = document.getElementById('nameScreen');
   const $game       = document.getElementById('gameScreen');
@@ -1331,10 +1326,9 @@
   }
 
   function getFireInterval() {
-    let base = powerUpActive && powerUpType === 'rapidfire' ? 100 : 280;
-    if ($game.classList.contains('fever-lv2')) return Math.min(base, 140);
-    if ($game.classList.contains('fever')) return Math.min(base, 200);
-    return base;
+    if ($game.classList.contains('fever-lv2')) return 140;
+    if ($game.classList.contains('fever')) return 200;
+    return 280;
   }
 
   function fireBullet() {
@@ -1348,13 +1342,8 @@
       $game.appendChild(el);
       return el;
     };
-    const isSpread = powerUpActive && powerUpType === 'spread';
-    const isLv2    = $game.classList.contains('fever-lv2');
-    if (isLv2 && isSpread) {
-      [[-5,-4],[-3,-5],[0,-6],[3,-5],[5,-4]].forEach(([vx, vy]) => {
-        const el = makeEl(playerX); bullets.push({ el, x: playerX - bw/2, y, vx, vy });
-      });
-    } else if (isLv2 || isSpread) {
+    const isLv2 = $game.classList.contains('fever-lv2');
+    if (isLv2) {
       [[-4,-5],[0,-6],[4,-5]].forEach(([vx, vy]) => {
         const el = makeEl(playerX); bullets.push({ el, x: playerX - bw/2, y, vx, vy });
       });
@@ -1451,104 +1440,6 @@
     } catch (_) {}
   }
   /* ── Power-up items ── */
-  function spawnPowerUp() {
-    if (gameOver) return;
-    const W    = window.innerWidth;
-    const hudH = $game.querySelector('.game-hud').offsetHeight || 56;
-    const size = 48;
-    const types = [
-      { icon: '⭐', type: 'rapidfire' },
-      { icon: '💥', type: 'spread' },
-    ];
-    const chosen = types[Math.floor(Math.random() * types.length)];
-    const el = document.createElement('div');
-    el.className = 'power-item';
-    el.style.width  = size + 'px';
-    el.style.height = size + 'px';
-    el.textContent  = chosen.icon;
-    el.dataset.powerType = chosen.type;
-    const x = 16 + Math.random() * Math.max(0, W - 32 - size);
-    const y = hudH - size;
-    el.style.left = x + 'px';
-    el.style.top  = y + 'px';
-    $game.appendChild(el);
-    powerItems.push({ el, x, y, vx: (Math.random() - 0.5) * 0.6, vy: 1.0, size });
-    if (!gameOver) powerSpawnTimer = setTimeout(spawnPowerUp, 12000 + Math.random() * 8000);
-  }
-  function updatePowerItems() {
-    for (let i = powerItems.length - 1; i >= 0; i--) {
-      const p = powerItems[i];
-      if (!p.el.isConnected) { powerItems.splice(i, 1); continue; }
-      p.x += p.vx;
-      p.x = Math.max(0, Math.min(window.innerWidth - p.size, p.x));
-      p.y += p.vy;
-      p.el.style.left = p.x + 'px';
-      p.el.style.top  = p.y + 'px';
-      if (p.y > window.innerHeight + 20) { p.el.remove(); powerItems.splice(i, 1); }
-    }
-  }
-  function checkPowerCollisions() {
-    const bh = 20;
-    for (let bi = bullets.length - 1; bi >= 0; bi--) {
-      const b = bullets[bi];
-      const bx1 = b.x, by1 = b.y, bx2 = b.x + 6, by2 = b.y + bh;
-      for (let pi = powerItems.length - 1; pi >= 0; pi--) {
-        const p = powerItems[pi];
-        if (bx2 > p.x && bx1 < p.x + p.size && by2 > p.y && by1 < p.y + p.size) {
-          b.el.remove(); bullets.splice(bi, 1);
-          const pType = p.el.dataset.powerType;
-          const px = p.x + p.size / 2, py = p.y + p.size / 2;
-          p.el.remove(); powerItems.splice(pi, 1);
-          activatePowerUp(pType, px, py);
-          break;
-        }
-      }
-    }
-  }
-  const POWER_NAMES = { rapidfire: '⭐ 連射強化', spread: '💥 拡散弾' };
-  function updatePowerHUD() {
-    const el = document.getElementById('hudPower');
-    if (!el) return;
-    if (powerUpActive && powerUpType) {
-      el.textContent = POWER_NAMES[powerUpType] || 'パワーアップ';
-      el.className = 'hud-power active';
-    } else {
-      el.textContent = '';
-      el.className = 'hud-power';
-    }
-  }
-  function activatePowerUp(type, cx, cy) {
-    clearTimeout(powerUpTimer);
-    powerUpActive = true;
-    powerUpType   = type;
-    navigator.vibrate?.([40, 30, 80]);
-    const labelEl = document.getElementById('powerUpLabel');
-    labelEl.textContent = (POWER_NAMES[type] || 'パワーアップ') + '！';
-    labelEl.className = 'active';
-    updatePowerHUD();
-    try {
-      const ctx = getCtx(); if (ctx) {
-        const osc = ctx.createOscillator(), g = ctx.createGain();
-        osc.connect(g); g.connect(ctx.destination); osc.type = 'triangle';
-        osc.frequency.setValueAtTime(880, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.18);
-        g.gain.setValueAtTime(0.4, ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.3);
-      }
-    } catch (_) {}
-    const fl = document.createElement('div');
-    fl.className = 'float-score';
-    fl.style.cssText = `color:#00ffee;font-size:1.4rem;left:${cx - 55}px;top:${cy - 20}px;`;
-    fl.textContent = (POWER_NAMES[type] || 'パワーアップ') + '！';
-    $game.appendChild(fl);
-    setTimeout(() => fl.remove(), 1000);
-    powerUpTimer = setTimeout(() => {
-      powerUpActive = false; powerUpType = null;
-      document.getElementById('powerUpLabel').className = '';
-      updatePowerHUD();
-    }, 10000);
-  }
 
   function createShatter(el) {
     const imgEl = el.querySelector('img');
@@ -1598,9 +1489,7 @@
       updateBullets();
       updateEnemies();
       updateEnemyBullets();
-      updatePowerItems();
       checkCollisions();
-      checkPowerCollisions();
       checkPlayerHit();
       if (remaining <= 0 && !gameOver) {
         gameOver = true; gameWon = true;
@@ -1754,19 +1643,11 @@ function runCountdown(cb) {
     recentKillsSpeed     = [];
     clearTimeout(feverTimer);
     clearTimeout(fireTimer);
-    if (stageNum === 1) {
-      clearTimeout(powerUpTimer);
-      powerUpTimer = null; powerUpActive = false; powerUpType = null;
-    }
-    clearTimeout(powerSpawnTimer);
-    fireTimer = null; powerSpawnTimer = null;
+    fireTimer = null;
     bullets.forEach(b => b.el.remove()); bullets = [];
     enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
     enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
-    powerItems.forEach(p => { if (p.el.isConnected) p.el.remove(); }); powerItems = [];
-    $game.querySelectorAll('.bullet,.power-item,.ebullet').forEach(e => e.remove());
-    if (stageNum === 1) document.getElementById('powerUpLabel').className = '';
-    updatePowerHUD();
+    $game.querySelectorAll('.bullet,.ebullet').forEach(e => e.remove());
     $game.classList.remove('fever', 'fever-lv2');
     clearTimeout(invincibleTimer);
     playerInvincible = false;
@@ -1792,7 +1673,6 @@ function runCountdown(cb) {
       for (let i = 0; i < INITIAL_SPAWN; i++) spawnItem();
       spawnTimerId = setTimeout(spawnLoop, SPAWN_INTERVAL_MS);
       fireBulletLoop();
-      powerSpawnTimer = setTimeout(spawnPowerUp, 7000 + Math.random() * 5000);
       rafId = requestAnimationFrame(tickTimer);
     });
   }
@@ -1801,12 +1681,11 @@ function runCountdown(cb) {
   /* ── ゲーム終了 ── */
   function endGame() {
     stopTimer();
-    clearTimeout(fireTimer); clearTimeout(powerSpawnTimer); clearTimeout(powerUpTimer);
-    fireTimer = null; powerSpawnTimer = null;
+    clearTimeout(fireTimer);
+    fireTimer = null;
     bullets.forEach(b => b.el.remove()); bullets = [];
     enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
     enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
-    powerItems.forEach(p => { if (p.el.isConnected) p.el.remove(); }); powerItems = [];
     $game.querySelectorAll('.tap-item,.particle,.ebullet').forEach(e => e.remove());
     clearTimeout(invincibleTimer);
     playerInvincible = false;
