@@ -571,6 +571,39 @@
     }
     /* ライフ表示 */
     #hudLives { font-size: 1.1rem; letter-spacing: 2px; }
+    /* ── Charge bar ── */
+    .charge-bar-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      min-width: 80px;
+    }
+    .charge-bar-label {
+      font-size: 0.55rem;
+      font-weight: 700;
+      color: #aaa;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+    .charge-bar-label.rapid  { color: #ff4400; }
+    .charge-bar-label.ready  { color: #00ffee; }
+    .charge-bar-track {
+      width: 80px;
+      height: 5px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .charge-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(to right, #00ffee, #00bbff);
+      transition: background 0.3s;
+    }
+    .charge-bar-fill.rapid    { background: linear-gradient(to right, #ff4400, #ffdd00); }
+    .charge-bar-fill.cooldown { background: linear-gradient(to right, #ff2200, #ff8800); }
+
     /* ── Bullets ── */
     .bullet {
       position: absolute;
@@ -809,6 +842,12 @@
     <div class="hud-timer" id="hudTimer">0.00</div>
     <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
       <div id="hudLives">❤️❤️❤️</div>
+      <div class="charge-bar-wrap">
+        <div class="charge-bar-label ready" id="chargeLabel">W-TAP 連射</div>
+        <div class="charge-bar-track">
+          <div class="charge-bar-fill" id="chargeBarFill" style="width:100%"></div>
+        </div>
+      </div>
     </div>
     <div class="hud-right">
       <div class="hud-power"  id="hudPower"></div>
@@ -917,6 +956,11 @@
   let playerInvincible = false;
   let invincibleTimer  = null;
   let fireTimer        = null;
+  let rapidFireMode    = false;
+  let inCooldown       = false;
+  let lastTapTime      = 0;
+  let rapidFireStartMs = 0;
+  let cooldownStartMs  = 0;
   let currentStageNum = 1;
   let totalScore      = 0;
   let totalElapsed    = 0;
@@ -1065,6 +1109,22 @@
         }
       };
       ctx.state === 'suspended' ? ctx.resume().then(fire) : fire();
+    } catch (_) {}
+  }
+
+  function playRapidStart() {
+    try {
+      const ctx = getCtx(); if (!ctx) return;
+      const t = ctx.currentTime;
+      [0, 0.06, 0.12].forEach((dt, i) => {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(440 + i * 220, t + dt);
+        gain.gain.setValueAtTime(0.28, t + dt);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.1);
+        osc.start(t + dt); osc.stop(t + dt + 0.1);
+      });
     } catch (_) {}
   }
 
@@ -1349,6 +1409,7 @@
   }
 
   function getFireInterval() {
+    if (rapidFireMode) return 65;
     if ($game.classList.contains('fever-lv2')) return 140;
     if ($game.classList.contains('fever')) return 200;
     return 280;
@@ -1377,9 +1438,30 @@
   }
 
   function fireBulletLoop() {
-    if (gameOver) return;
+    if (gameOver || inCooldown) return;
     fireBullet();
     fireTimer = setTimeout(fireBulletLoop, getFireInterval());
+  }
+
+  function triggerRapidFire() {
+    if (rapidFireMode || inCooldown || gameOver || !startTime) return;
+    rapidFireMode    = true;
+    rapidFireStartMs = Date.now();
+    navigator.vibrate?.([15, 5, 15, 5, 15]);
+    playRapidStart();
+    clearTimeout(fireTimer);
+    fireBulletLoop();
+    setTimeout(() => {
+      rapidFireMode = false;
+      inCooldown    = true;
+      cooldownStartMs = Date.now();
+      clearTimeout(fireTimer);
+      fireTimer = null;
+      setTimeout(() => {
+        inCooldown = false;
+        if (!gameOver) fireBulletLoop();
+      }, 3000);
+    }, 1000);
   }
 
   function updateBullets() {
@@ -1411,7 +1493,8 @@
         enemies.splice(i, 1);
         continue;
       }
-      e.el.style.left = e.x + 'px';
+      const shakeX = e.src === 'IMG_3777.png' ? Math.sin(Date.now() / 50) * 6 : 0;
+      e.el.style.left = (e.x + shakeX) + 'px';
       e.el.style.top  = e.y + 'px';
     }
   }
@@ -1506,6 +1589,31 @@
   }
 
 /* ── タイマー ── */
+  function updateChargeBar() {
+    const fill  = document.getElementById('chargeBarFill');
+    const label = document.getElementById('chargeLabel');
+    if (!fill) return;
+    const now = Date.now();
+    if (rapidFireMode) {
+      const pct = Math.max(0, 1 - (now - rapidFireStartMs) / 1000);
+      fill.style.width = (pct * 100) + '%';
+      fill.className   = 'charge-bar-fill rapid';
+      label.textContent = '連射中！';
+      label.className  = 'charge-bar-label rapid';
+    } else if (inCooldown) {
+      const pct = Math.min(1, (now - cooldownStartMs) / 3000);
+      fill.style.width = (pct * 100) + '%';
+      fill.className   = 'charge-bar-fill cooldown';
+      label.textContent = 'チャージ中';
+      label.className  = 'charge-bar-label';
+    } else {
+      fill.style.width = '100%';
+      fill.className   = 'charge-bar-fill';
+      label.textContent = 'W-TAP 連射';
+      label.className  = 'charge-bar-label ready';
+    }
+  }
+
   function tickTimer() {
     if (!gameOver) {
       const elapsed    = startTime ? (Date.now() - startTime) / 1000 : 0;
@@ -1518,6 +1626,7 @@
       updateBullets();
       updateEnemies();
       updateEnemyBullets();
+      updateChargeBar();
       checkCollisions();
       checkPlayerHit();
       if (remaining <= 0 && !gameOver) {
@@ -1677,6 +1786,9 @@ function runCountdown(cb) {
     recentKillsSpeed     = [];
     clearTimeout(feverTimer);
     clearTimeout(fireTimer);
+    rapidFireMode = false;
+    inCooldown    = false;
+    lastTapTime   = 0;
     fireTimer = null;
     bullets.forEach(b => b.el.remove()); bullets = [];
     enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
@@ -1716,7 +1828,9 @@ function runCountdown(cb) {
   function endGame() {
     stopTimer();
     clearTimeout(fireTimer);
-    fireTimer = null;
+    fireTimer     = null;
+    rapidFireMode = false;
+    inCooldown    = false;
     bullets.forEach(b => b.el.remove()); bullets = [];
     enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
     enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
@@ -1932,13 +2046,19 @@ function runCountdown(cb) {
   });
   // ゲーム画面タップのたびにAudioContext再開（iOS対策）
   document.getElementById('gameScreen').addEventListener('pointerdown', () => initAudio(), { capture: true });
-  // 自機移動
+  // 自機移動 & ダブルタップ連射
   const moveShip = (e) => {
     if (gameOver || !startTime) return;
     const hudH = 80;
     playerX = Math.max(32, Math.min(window.innerWidth - 32, e.clientX));
     playerY = Math.max(hudH + 36, Math.min(window.innerHeight - 50, e.clientY));
     updateShipPosition();
+    // ダブルタップ検出（300ms以内に2回）
+    const now = Date.now();
+    if (now - lastTapTime < 300) {
+      triggerRapidFire();
+    }
+    lastTapTime = now;
   };
   document.getElementById('gameScreen').addEventListener('pointermove', moveShip);
   document.getElementById('gameScreen').addEventListener('pointerdown', moveShip);
