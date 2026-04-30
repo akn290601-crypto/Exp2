@@ -611,14 +611,28 @@
     .stage-label {
       position: absolute;
       top: 44%; left: 50%;
-      font-size: 3.6rem;
+      transform: translateX(-50%) translateY(-50%);
+      text-align: center;
+      pointer-events: none;
+      z-index: 36;
+      animation: stage-pop 1.6s ease-out forwards;
+    }
+    .stage-label .sl-num {
+      display: block;
+      font-size: 3.2rem;
       font-weight: 900;
       color: #fff;
       text-shadow: 0 0 20px #00ccff, 0 0 50px #0088ff;
-      pointer-events: none;
-      z-index: 36;
       white-space: nowrap;
-      animation: stage-pop 1.6s ease-out forwards;
+    }
+    .stage-label .sl-sub {
+      display: block;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #ffd200;
+      text-shadow: 0 0 12px rgba(255,210,0,0.6);
+      white-space: nowrap;
+      margin-top: 4px;
     }
     /* ── Power-up label ── */
     @keyframes power-pulse { from { opacity: 1; } to { opacity: 0.5; } }
@@ -868,14 +882,14 @@
   const INITIAL_SPAWN     = 3;
   const STAGE_TIME_S      = 28;
   const STAGE_CONFIGS = [
-    { num: 1, label: 'STAGE 1', spawnLimit: 45,
+    { num: 1, label: 'STAGE 1', subtitle: 'パラレルの男', spawnLimit: 45,
       srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.4, vyMax: 0.8 },
-    { num: 2, label: 'STAGE 2', spawnLimit: 55,
+    { num: 2, label: 'STAGE 2', subtitle: 'ツインタワー', spawnLimit: 55,
       srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.6, vyMax: 1.1 },
-    { num: 3, label: 'STAGE 3', spawnLimit: 60,
+    { num: 3, label: 'STAGE 3', subtitle: '俺つらぬく', spawnLimit: 60,
       srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.9, vyMax: 1.5 },
-    { num: 4, label: 'STAGE 4', spawnLimit: 70,
-      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 1.2, vyMax: 2.0 },
+    { num: 4, label: 'STAGE 4', subtitle: '漢', spawnLimit: 70,
+      srcs: ['IMG_3775.png','IMG_3756.png','IMG_3777.png'], vyMin: 1.2, vyMax: 2.0 },
   ];
 
   let heroImgSrcs    = [];
@@ -1433,12 +1447,12 @@
   }
 
   /* ── Stage system ── */
-  function showStageLabel(text) {
+  function showStageLabel(label, subtitle) {
     const el = document.createElement('div');
     el.className = 'stage-label';
-    el.textContent = text;
+    el.innerHTML = `<span class="sl-num">${label}</span><span class="sl-sub">${subtitle || ''}</span>`;
     $game.appendChild(el);
-    setTimeout(() => el.remove(), 1700);
+    setTimeout(() => el.remove(), 2200);
   }
   function playStageUp() {
     try {
@@ -1682,7 +1696,7 @@ function runCountdown(cb) {
     document.getElementById('hudRemain').textContent = `残り ${cfg.spawnLimit}体`;
 
     showScreen($game);
-    showStageLabel(cfg.label);
+    showStageLabel(cfg.label, cfg.subtitle);
     setTimeout(() => playStageUp(), 100);
     runCountdown(() => {
       startTime     = Date.now();
