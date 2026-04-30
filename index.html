@@ -1905,8 +1905,13 @@ function runCountdown(cb) {
   document.getElementById('nextStageBtn').addEventListener('click', () => {
     initAudio();
     const won = document.getElementById('nextStageBtn').textContent.includes('STAGE');
-    if (won) startStage(currentStageNum + 1);
-    else startGame();
+    if (won) {
+      playerLives++;
+      updateLivesHUD();
+      startStage(currentStageNum + 1);
+    } else {
+      startGame();
+    }
   });
   // ゲーム画面タップのたびにAudioContext再開（iOS対策）
   document.getElementById('gameScreen').addEventListener('pointerdown', () => initAudio(), { capture: true });
