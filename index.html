@@ -870,10 +870,12 @@
   const STAGE_CONFIGS = [
     { num: 1, label: 'STAGE 1', spawnLimit: 45,
       srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.4, vyMax: 0.8 },
-    { num: 2, label: 'STAGE 2', spawnLimit: 60,
+    { num: 2, label: 'STAGE 2', spawnLimit: 55,
       srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.6, vyMax: 1.1 },
-    { num: 3, label: 'STAGE 3', spawnLimit: 90,
+    { num: 3, label: 'STAGE 3', spawnLimit: 60,
       srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.9, vyMax: 1.5 },
+    { num: 4, label: 'STAGE 4', spawnLimit: 70,
+      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 1.2, vyMax: 2.0 },
   ];
 
   let heroImgSrcs    = [];
@@ -1539,7 +1541,7 @@
     if (heroImgSrcs.length > 0) {
       const pool = heroImgSrcs.filter(s => cfg.srcs.includes(s));
       src = (pool.length > 0 ? pool : heroImgSrcs)[Math.floor(Math.random() * (pool.length || heroImgSrcs.length))];
-      itemSize = Math.round(SIZE * 0.72);
+      itemSize = Math.round(SIZE * 0.85);
       el.dataset.src = src;
       const img = document.createElement('img');
       img.src = src; img.draggable = false;
@@ -1594,7 +1596,8 @@
       checkSpeedBoost();
       const cfg = STAGE_CONFIGS[currentStageNum - 1];
       showFloatScore(cx, cy, score);
-      document.getElementById('hudScore').textContent = `💥 ${score}体撃破`;
+      document.getElementById('hudScore').textContent  = `💥 ${score}体撃破`;
+      document.getElementById('hudRemain').textContent = `残り ${Math.max(0, cfg.spawnLimit - score)}体`;
       setTimeout(() => el.remove(), 430);
     }, 80);
   }
@@ -1676,7 +1679,7 @@ function runCountdown(cb) {
     timerEl.textContent = '0.00';
     timerEl.classList.remove('orange','red');
     document.getElementById('hudScore').textContent  = '💥 0体撃破';
-    document.getElementById('hudRemain').textContent = '';
+    document.getElementById('hudRemain').textContent = `残り ${cfg.spawnLimit}体`;
 
     showScreen($game);
     showStageLabel(cfg.label);
