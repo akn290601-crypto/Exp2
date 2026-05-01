@@ -618,6 +618,10 @@
       z-index: 11;
       will-change: transform;
     }
+    .bullet.rapid {
+      background: #ffffff;
+      box-shadow: 0 0 8px 2px rgba(255,255,255,0.9);
+    }
 
     /* ── Power-up items ── */
     .power-item {
@@ -1414,7 +1418,6 @@
   }
 
   function getFireInterval() {
-    if (rapidFireLevel >= 2) return 35;
     if (rapidFireLevel >= 1) return 65;
     if ($game.classList.contains('fever-lv2')) return 140;
     if ($game.classList.contains('fever')) return 200;
@@ -1427,7 +1430,7 @@
     const y = playerY - 32 - bh;
     const makeEl = (x) => {
       const el = document.createElement('div');
-      el.className = 'bullet';
+      el.className = 'bullet' + (rapidFireLevel > 0 ? ' rapid' : '');
       el.style.transform = `translate(${x - bw / 2}px,${y}px)`;
       $game.appendChild(el);
       return el;
@@ -1449,12 +1452,11 @@
     fireTimer = setTimeout(fireBulletLoop, getFireInterval());
   }
 
-  function triggerRapidFire(level) {
-    if (doubleTapLocked || gameOver || !startTime) return;
-    if (level <= rapidFireLevel) return;
-    rapidFireLevel   = level;
+  function triggerRapidFire() {
+    if (doubleTapLocked || rapidFireLevel > 0 || gameOver || !startTime) return;
+    rapidFireLevel   = 1;
     rapidFireStartMs = Date.now();
-    navigator.vibrate?.(level >= 2 ? [15,5,15,5,15,5,15] : [15,5,15,5,15]);
+    navigator.vibrate?.([15,5,15,5,15]);
     playRapidStart();
     clearTimeout(rapidFireEndTimer);
     clearTimeout(fireTimer);
@@ -1603,7 +1605,7 @@
       const pct = Math.max(0, 1 - (now - rapidFireStartMs) / RAPID_DURATION);
       fill.style.width  = (pct * 100) + '%';
       fill.className    = 'rapid-bar-fill active';
-      label.textContent = rapidFireLevel >= 2 ? '🔥MAX連射中' : '⚡連射中';
+      label.textContent = '⚡連射中';
       label.className   = 'rapid-bar-label active';
     } else if (doubleTapLocked) {
       const pct = Math.min(1, (now - cooldownStartMs) / COOLDOWN_DURATION);
@@ -2068,8 +2070,7 @@ function runCountdown(cb) {
     const now = Date.now();
     if (now - lastTapTime < 300) { tapCount++; } else { tapCount = 1; }
     lastTapTime = now;
-    if (tapCount === 2) triggerRapidFire(1);
-    else if (tapCount >= 3) triggerRapidFire(2);
+    if (tapCount === 2) triggerRapidFire();
   });
   document.getElementById('gameScreen').addEventListener('pointermove', moveShip);
   document.getElementById('backBtn').addEventListener('click', () => {
