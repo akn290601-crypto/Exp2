@@ -498,6 +498,33 @@
       60%  { transform: translateY(-40px) scale(1.1); opacity: 1; }
       100% { transform: translateY(-70px) scale(0.8); opacity: 0; }
     }
+    /* ── Ship growth ── */
+    .growth-up {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.3rem;
+      font-weight: 900;
+      pointer-events: none;
+      z-index: 38;
+      white-space: nowrap;
+      animation: float-up 1.1s ease-out forwards;
+    }
+    .growth-up.spd { color: #00ffee; text-shadow: 0 0 14px #00ffee, 0 0 30px #00aaff; }
+    .growth-up.pwr { color: #ff8800; text-shadow: 0 0 14px #ff8800, 0 0 30px #ff4400; }
+    .ship-stats {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      font-size: 0.6rem;
+      font-weight: 700;
+    }
+    .ss-block { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .ss-label { color: #888; letter-spacing: 0.06em; }
+    .ss-dots  { color: #00ffee; letter-spacing: 1px; }
+    .ss-dots.pwr { color: #ff8800; }
+
+    /* ── float-score ── */
     .float-score {
       position: absolute;
       font-size: 1.8rem;
@@ -859,6 +886,10 @@
           <div class="rapid-bar-fill" id="rapidBarFill"></div>
         </div>
       </div>
+      <div class="ship-stats">
+        <div class="ss-block"><span class="ss-label">SPD</span><span class="ss-dots" id="spdDots">●○○</span></div>
+        <div class="ss-block"><span class="ss-label">PWR</span><span class="ss-dots pwr" id="pwrDots">●○○</span></div>
+      </div>
     </div>
     <div class="hud-right">
       <div class="hud-power"  id="hudPower"></div>
@@ -979,6 +1010,10 @@
   let currentStageNum = 1;
   let totalScore      = 0;
   let totalElapsed    = 0;
+  let shipSpeedLv     = 1;
+  let shipPowerLv     = 1;
+  const SPEED_UP_AT   = [15, 40];
+  const POWER_UP_AT   = [20, 55];
 
   const $name       = document.getElementById('nameScreen');
   const $game       = document.getElementById('gameScreen');
@@ -1173,6 +1208,37 @@
   }
 
   /* ── エフェクト ── */
+  function updateShipStats() {
+    const s = document.getElementById('spdDots');
+    const p = document.getElementById('pwrDots');
+    if (s) s.textContent = '●'.repeat(shipSpeedLv) + '○'.repeat(3 - shipSpeedLv);
+    if (p) p.textContent = '●'.repeat(shipPowerLv) + '○'.repeat(3 - shipPowerLv);
+  }
+
+  function showGrowthUp(text, type) {
+    const el = document.createElement('div');
+    el.className = 'growth-up ' + type;
+    el.textContent = text;
+    el.style.top = (window.innerHeight * 0.38) + 'px';
+    $game.appendChild(el);
+    setTimeout(() => el.remove(), 1100);
+  }
+
+  function checkShipGrowth() {
+    const total = totalScore + score;
+    const newSpd = total >= SPEED_UP_AT[1] ? 3 : total >= SPEED_UP_AT[0] ? 2 : 1;
+    const newPwr = total >= POWER_UP_AT[1] ? 3 : total >= POWER_UP_AT[0] ? 2 : 1;
+    if (newSpd > shipSpeedLv) {
+      shipSpeedLv = newSpd;
+      showGrowthUp(`⚡ SPEED Lv${shipSpeedLv}`, 'spd');
+    }
+    if (newPwr > shipPowerLv) {
+      shipPowerLv = newPwr;
+      showGrowthUp(`🔥 POWER Lv${shipPowerLv}`, 'pwr');
+    }
+    updateShipStats();
+  }
+
   function shakeScreen() {
     $game.classList.remove('shaking');
     void $game.offsetWidth;
@@ -1442,14 +1508,16 @@
       $game.appendChild(el);
       return el;
     };
+    const bVy = shipSpeedLv >= 3 ? -13 : shipSpeedLv >= 2 ? -9 : -6;
     const isLv2 = $game.classList.contains('fever-lv2');
     if (isLv2) {
-      [[-4,-5],[0,-6],[4,-5]].forEach(([vx, vy]) => {
+      const s = Math.abs(bVy) / 6;
+      [[-4 * s, bVy * 0.83],[0, bVy],[4 * s, bVy * 0.83]].forEach(([vx, vy]) => {
         const el = makeEl(playerX); bullets.push({ el, x: playerX - bw/2, y, vx, vy });
       });
     } else {
       const el = makeEl(playerX);
-      bullets.push({ el, x: playerX - bw / 2, y, vx: 0, vy: -6 });
+      bullets.push({ el, x: playerX - bw / 2, y, vx: 0, vy: bVy });
     }
   }
 
@@ -1529,7 +1597,7 @@
           flashHitRim();
           playHitLight();
           navigator.vibrate?.(18);
-          e.hp = (e.hp || 1) - 1;
+          e.hp = (e.hp || 1) - shipPowerLv;
           if (e.hp <= 0) {
             enemies.splice(ei, 1);
             showCombo(hx, hy - 20);
@@ -1738,6 +1806,7 @@
       score++;
       checkFever();
       checkSpeedBoost();
+      checkShipGrowth();
       const cfg = STAGE_CONFIGS[currentStageNum - 1];
       showFloatScore(cx, cy, score);
       document.getElementById('hudScore').textContent  = `💥 ${score}体撃破`;
@@ -1800,7 +1869,11 @@ function runCountdown(cb) {
     startTime      = null;
     feverMode        = false;
     recentKills      = [];
-    if (stageNum === 1) { totalScore = 0; totalElapsed = 0; playerLives = 3; updateLivesHUD(); }
+    if (stageNum === 1) {
+      totalScore = 0; totalElapsed = 0; playerLives = 3; updateLivesHUD();
+      shipSpeedLv = 1; shipPowerLv = 1;
+    }
+    updateShipStats();
     gameEndType          = '';
     speedBoostCount      = 0;
     speedBoostNextThresh = 5;
