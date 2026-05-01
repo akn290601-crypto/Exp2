@@ -1018,6 +1018,7 @@
   const RAPID_DURATION  = 2000;
   const COOLDOWN_DURATION = 5000;
   let currentStageNum = 1;
+  let cachedHudH      = 56;
   let totalScore      = 0;
   let totalElapsed    = 0;
   let shipSpeedLv     = 1;
@@ -1593,7 +1594,7 @@
   }
 
   function updateEnemies() {
-    const hudH = ($game.querySelector('.game-hud') || {}).offsetHeight || 56;
+    const hudH = cachedHudH;
     for (let i = enemies.length - 1; i >= 0; i--) {
       const e = enemies[i];
       if (!e.el.isConnected || e.el.classList.contains('bursting') || e.el.classList.contains('pre-burst')) {
@@ -1733,28 +1734,34 @@
   }
 
   function tickTimer() {
-    if (!gameOver) {
-      const elapsed    = startTime ? (Date.now() - startTime) / 1000 : 0;
-      const remaining  = Math.max(0, STAGE_TIME_S - elapsed);
-      const timerEl    = document.getElementById('hudTimer');
-      timerEl.textContent = Math.ceil(remaining);
-      if (remaining <= 10) { timerEl.classList.remove('orange'); timerEl.classList.add('red'); }
-      else if (remaining <= 20) { timerEl.classList.remove('red'); timerEl.classList.add('orange'); }
-      else { timerEl.classList.remove('orange','red'); }
-      updateBullets();
-      updateEnemies();
-      updateEnemyBullets();
-      updateRapidBar();
-      checkCollisions();
-      checkPlayerHit();
-      if (remaining <= 0 && !gameOver) {
-        gameOver = true; gameWon = true;
-        stopSpawn(); stopTimer();
-        enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
-        enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
-        setTimeout(() => endGame(), 300);
-        return;
+    try {
+      if (!gameOver) {
+        const elapsed   = startTime ? (Date.now() - startTime) / 1000 : 0;
+        const remaining = Math.max(0, STAGE_TIME_S - elapsed);
+        const timerEl   = document.getElementById('hudTimer');
+        if (timerEl) {
+          timerEl.textContent = Math.ceil(remaining);
+          if (remaining <= 10) { timerEl.classList.remove('orange'); timerEl.classList.add('red'); }
+          else if (remaining <= 20) { timerEl.classList.remove('red'); timerEl.classList.add('orange'); }
+          else { timerEl.classList.remove('orange','red'); }
+        }
+        updateBullets();
+        updateEnemies();
+        updateEnemyBullets();
+        updateRapidBar();
+        checkCollisions();
+        checkPlayerHit();
+        if (remaining <= 0 && !gameOver) {
+          gameOver = true; gameWon = true;
+          stopSpawn(); stopTimer();
+          enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
+          enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
+          setTimeout(() => endGame(), 300);
+          return;
+        }
       }
+    } catch (err) {
+      console.error('tickTimer error:', err);
     }
     rafId = requestAnimationFrame(tickTimer);
   }
@@ -1766,7 +1773,7 @@
     if (gameOver || totalSpawned >= cfg.spawnLimit) return;
     totalSpawned++;
 
-    const hudH = $game.querySelector('.game-hud').offsetHeight || 56;
+    const hudH = cachedHudH;
     const W    = window.innerWidth;
 
     const el = document.createElement('div');
@@ -1888,7 +1895,7 @@ function runCountdown(cb) {
     const cfg = STAGE_CONFIGS[currentStageNum - 1];
     stopBGM();
     document.getElementById('dangerOverlay').classList.remove('active');
-    $game.querySelectorAll('.tap-item,.particle,.float-score,.stage-label').forEach(e => e.remove());
+    $game.querySelectorAll('.tap-item,.particle,.float-score,.stage-label,.shard,.growth-up').forEach(e => e.remove());
 
     score          = 0;
     gameOver       = false;
@@ -1938,6 +1945,7 @@ function runCountdown(cb) {
     setTimeout(() => playStageUp(), 100);
     runCountdown(() => {
       startTime     = Date.now();
+      cachedHudH    = $game.querySelector('.game-hud').offsetHeight || 56;
       playerX       = window.innerWidth / 2;
       playerY       = window.innerHeight - 80;
       updateShipPosition();
@@ -1963,7 +1971,7 @@ function runCountdown(cb) {
     bullets.forEach(b => b.el.remove()); bullets = [];
     enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
     enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
-    $game.querySelectorAll('.tap-item,.particle,.ebullet').forEach(e => e.remove());
+    $game.querySelectorAll('.tap-item,.particle,.ebullet,.shard,.growth-up,.bullet').forEach(e => e.remove());
     clearTimeout(invincibleTimer);
     playerInvincible = false;
     document.getElementById('playerShip').classList.remove('invincible');
