@@ -419,6 +419,25 @@
     }
     .tap-item.spawning { animation: spawn-in 0.22s cubic-bezier(0.34,1.56,0.64,1) forwards; }
 
+/* ── Stage 5 ボスビーム ── */
+    .boss-beam {
+      position: absolute;
+      z-index: 8;
+      pointer-events: none;
+      background: linear-gradient(to bottom,
+        rgba(0,240,255,1) 0%,
+        rgba(80,160,255,0.85) 40%,
+        rgba(80,60,255,0.4) 100%);
+      box-shadow: 0 0 24px 8px rgba(0,220,255,0.8), 0 0 6px 2px #fff;
+      animation: beam-in 0.12s ease-out, beam-out 0.5s 1.1s ease-in forwards;
+      transform-origin: top center;
+    }
+    @keyframes beam-in  { from { opacity:0; transform:scaleX(0.2); } to { opacity:1; transform:scaleX(1); } }
+    @keyframes beam-out { to   { opacity:0; } }
+
+    .boss-enemy { z-index: 5; }
+    .boss-enemy img { image-rendering: pixelated; }
+
 /* ── Tap items ── */
     .tap-item.hit-flash { filter: brightness(3) saturate(0); }
     .tap-item {
@@ -861,6 +880,20 @@
     <div class="spc-kills">累計撃破数 <span id="titleLtKills">0</span> 体</div>
   </div>
   <button class="btn btn-primary" id="startBtn">ゲームスタート</button>
+  <!-- DEBUG: ステージ選択（本番時削除） -->
+  <div id="debugStageSelect" style="margin-top:18px;text-align:center;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);border-radius:12px;padding:10px 16px;display:inline-block;">
+    <div style="color:#ffcc00;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:6px;">🔧 DEBUG: テストプレイ</div>
+    <div style="display:flex;gap:8px;align-items:center;justify-content:center;">
+      <select id="debugStageNum" style="background:#111;color:#fff;border:1px solid #555;border-radius:8px;padding:6px 10px;font-size:14px;">
+        <option value="1">STAGE 1</option>
+        <option value="2">STAGE 2</option>
+        <option value="3">STAGE 3</option>
+        <option value="4">STAGE 4</option>
+        <option value="5">STAGE 5 👾</option>
+      </select>
+      <button id="debugStartBtn" style="background:#333;color:#fff;border:1px solid #555;border-radius:8px;padding:6px 14px;font-size:14px;cursor:pointer;">GO</button>
+    </div>
+  </div>
   <div class="lb-wrap" id="topLb"></div>
   <div class="lb-wrap" id="topEndingHistory"></div>
 </div>
@@ -973,13 +1006,15 @@
   const STAGE_TIME_S      = 28;
   const STAGE_CONFIGS = [
     { num: 1, label: 'STAGE 1', subtitle: 'パラレルの男', spawnLimit: 45,
-      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.4, vyMax: 0.8 },
+      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.4, vyMax: 0.8, duration: 28 },
     { num: 2, label: 'STAGE 2', subtitle: 'ツインタワー', spawnLimit: 55,
-      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.6, vyMax: 1.1 },
+      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.6, vyMax: 1.1, duration: 28 },
     { num: 3, label: 'STAGE 3', subtitle: '俺つらぬく', spawnLimit: 60,
-      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.9, vyMax: 1.5 },
+      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.9, vyMax: 1.5, duration: 28 },
     { num: 4, label: 'STAGE 4', subtitle: '漢', spawnLimit: 70,
-      srcs: ['IMG_3775.png','IMG_3756.png','IMG_3777.png'], vyMin: 1.2, vyMax: 2.0 },
+      srcs: ['IMG_3775.png','IMG_3756.png','IMG_3777.png'], vyMin: 1.2, vyMax: 2.0, duration: 28 },
+    { num: 5, label: 'STAGE 5', subtitle: 'RK-001', spawnLimit: 999, boss: true,
+      srcs: ['IMG_3784.png','IMG_3786.png'], vyMin: 0, vyMax: 0, duration: 60 },
   ];
 
   let heroImgSrcs    = [];
@@ -1006,6 +1041,15 @@
   let playerLives      = 3;
   let playerInvincible = false;
   let invincibleTimer  = null;
+
+  /* ── Stage 5 boss state ── */
+  const BOSS_FACE_SIZE  = 150;
+  const BOSS_HAND_SIZE  = 130;
+  const BOSS_FACE_HP    = 20;
+  const BOSS_HAND_HP    = 30;
+  let bossStageActive       = false;
+  let bossFaceRespawnTimer  = null;
+  let bossHandRespawnTimer  = null;
   let fireTimer        = null;
   let rapidFireLevel    = 0;
   let doubleTapLocked   = false;
@@ -1600,6 +1644,13 @@
       if (!e.el.isConnected || e.el.classList.contains('bursting') || e.el.classList.contains('pre-burst')) {
         enemies.splice(i, 1); continue;
       }
+      if (e.fixed) {
+        // ボス：水平微振動のみ（固定位置）
+        const shakeX = Math.sin(Date.now() / 120) * 3;
+        e.el.style.left = (e.x + shakeX) + 'px';
+        e.el.style.top  = e.y + 'px';
+        continue;
+      }
       e.x += e.vx;
       e.x = Math.max(0, Math.min(window.innerWidth - e.size, e.x));
       e.y += e.vy;
@@ -1737,7 +1788,8 @@
     try {
       if (!gameOver) {
         const elapsed   = startTime ? (Date.now() - startTime) / 1000 : 0;
-        const remaining = Math.max(0, STAGE_TIME_S - elapsed);
+        const stageDur  = STAGE_CONFIGS[currentStageNum - 1]?.duration ?? STAGE_TIME_S;
+        const remaining = Math.max(0, stageDur - elapsed);
         const timerEl   = document.getElementById('hudTimer');
         if (timerEl) {
           timerEl.textContent = Math.ceil(remaining);
@@ -1825,9 +1877,9 @@
   function triggerBurst(el) {
     if (gameOver) return;
     if (el.classList.contains('bursting') || el.classList.contains('pre-burst')) return;
-    // 射撃タイマー停止
     const eObj = enemies.find(e => e.el === el);
-    if (eObj) clearTimeout(eObj.shootTimer);
+    if (eObj) { clearTimeout(eObj.shootTimer); clearTimeout(eObj.animTimer); }
+    const bossType = el.dataset.bosstype || null;
     el.classList.add('pre-burst');
     navigator.vibrate?.(50);
     setTimeout(() => {
@@ -1846,8 +1898,28 @@
       const cfg = STAGE_CONFIGS[currentStageNum - 1];
       showFloatScore(cx, cy, score);
       document.getElementById('hudScore').textContent  = `💥 ${score}体撃破`;
-      document.getElementById('hudRemain').textContent = `残り ${Math.max(0, cfg.spawnLimit - score)}体`;
-      setTimeout(() => el.remove(), 430);
+      if (cfg.boss) {
+        document.getElementById('hudRemain').textContent = '💀 BOSS';
+      } else {
+        document.getElementById('hudRemain').textContent = `残り ${Math.max(0, cfg.spawnLimit - score)}体`;
+      }
+      setTimeout(() => {
+        el.remove();
+        // ボスは一定時間後に復活
+        if (bossType && bossStageActive && !gameOver) {
+          const W = window.innerWidth, hudH = cachedHudH;
+          const faceY = hudH + 10;
+          if (bossType === 'face') {
+            bossFaceRespawnTimer = setTimeout(() => {
+              if (!gameOver && bossStageActive) spawnBossEnemy('face', (W - BOSS_FACE_SIZE) / 2, faceY, BOSS_FACE_SIZE, BOSS_FACE_HP);
+            }, 2500);
+          } else {
+            bossHandRespawnTimer = setTimeout(() => {
+              if (!gameOver && bossStageActive) spawnBossEnemy('hand', (W - BOSS_HAND_SIZE) / 2, faceY + BOSS_FACE_SIZE + 10, BOSS_HAND_SIZE, BOSS_HAND_HP);
+            }, 2500);
+          }
+        }
+      }, 430);
     }, 80);
   }
 
@@ -1864,6 +1936,100 @@
     if (totalSpawned < cfg.spawnLimit) {
       spawnTimerId = setTimeout(spawnLoop, getSpawnInterval());
     }
+  }
+
+  /* ── Stage 5 ボス生成 ── */
+  function spawnBossStage5() {
+    if (gameOver) return;
+    const W    = window.innerWidth;
+    const hudH = cachedHudH;
+    const faceY = hudH + 10;
+    spawnBossEnemy('face', (W - BOSS_FACE_SIZE) / 2, faceY, BOSS_FACE_SIZE, BOSS_FACE_HP);
+    spawnBossEnemy('hand', (W - BOSS_HAND_SIZE) / 2, faceY + BOSS_FACE_SIZE + 10, BOSS_HAND_SIZE, BOSS_HAND_HP);
+  }
+
+  function spawnBossEnemy(type, x, y, size, hp) {
+    if (gameOver) return null;
+    const el = document.createElement('div');
+    el.className = 'tap-item boss-enemy';
+    el.dataset.bosstype = type;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'tap-overlay';
+    el.appendChild(overlay);
+
+    const img = document.createElement('img');
+    img.src = type === 'face' ? 'IMG_3784.png' : 'IMG_3786.png';
+    img.draggable = false;
+    el.appendChild(img);
+
+    el.style.width  = size + 'px';
+    el.style.height = size + 'px';
+    el.style.left   = x + 'px';
+    el.style.top    = y + 'px';
+
+    el.classList.add('spawning');
+    el.addEventListener('animationend', () => el.classList.remove('spawning'), { once: true });
+    $game.appendChild(el);
+
+    const enemy = {
+      el, x, y, vx: 0, vy: 0, size, hp,
+      shootTimer: null, animTimer: null,
+      src: type === 'face' ? 'IMG_3784.png' : 'IMG_3786.png',
+      fixed: true, bossType: type, handPhase: false
+    };
+    enemies.push(enemy);
+
+    if (type === 'face') {
+      enemy.shootTimer = setTimeout(() => bossBeamAttack(enemy), 2000 + Math.random() * 1000);
+    } else {
+      enemy.animTimer  = setTimeout(() => bossHandAnimate(enemy), 800);
+      enemy.shootTimer = setTimeout(() => enemyShoot(enemy), 2500 + Math.random() * 1000);
+    }
+    return enemy;
+  }
+
+  function bossBeamAttack(enemy) {
+    if (gameOver || !enemy.el.isConnected) return;
+    const img = enemy.el.querySelector('img');
+    if (img) img.src = 'IMG_3785.png';
+
+    const bx = enemy.x + enemy.size * 0.25;
+    const bw = enemy.size * 0.5;
+    const by = enemy.y + enemy.size * 0.82;
+    const bh = window.innerHeight - by + 60;
+
+    const beam = document.createElement('div');
+    beam.className = 'boss-beam';
+    beam.style.cssText = `left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;position:absolute;`;
+    $game.appendChild(beam);
+
+    const beamCheckId = setInterval(() => {
+      if (!beam.isConnected || gameOver || playerInvincible) return;
+      if (playerX >= bx - 10 && playerX <= bx + bw + 10 && playerY >= by - 20) {
+        clearInterval(beamCheckId);
+        loseLife();
+      }
+    }, 50);
+
+    setTimeout(() => {
+      clearInterval(beamCheckId);
+      beam.remove();
+      if (img && enemy.el.isConnected) img.src = 'IMG_3784.png';
+      if (!gameOver && enemy.el.isConnected && !enemy.el.classList.contains('bursting')) {
+        enemy.shootTimer = setTimeout(() => bossBeamAttack(enemy), 2500 + Math.random() * 1500);
+      }
+    }, 1500);
+  }
+
+  function bossHandAnimate(enemy) {
+    if (gameOver || !enemy.el.isConnected) return;
+    const img = enemy.el.querySelector('img');
+    if (img) {
+      img.src = enemy.handPhase ? 'IMG_3787.png' : 'IMG_3786.png';
+      enemy.handPhase = !enemy.handPhase;
+    }
+    enemy.animTimer = setTimeout(() => bossHandAnimate(enemy), 700);
   }
 
 function runCountdown(cb) {
@@ -1923,10 +2089,13 @@ function runCountdown(cb) {
     clearTimeout(cooldownTimer);
     cooldownTimer   = null;
     fireTimer = null;
+    bossStageActive = false;
+    clearTimeout(bossFaceRespawnTimer);
+    clearTimeout(bossHandRespawnTimer);
     bullets.forEach(b => b.el.remove()); bullets = [];
-    enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
+    enemies.forEach(e => { clearTimeout(e.shootTimer); clearTimeout(e.animTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
     enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
-    $game.querySelectorAll('.bullet,.ebullet').forEach(e => e.remove());
+    $game.querySelectorAll('.bullet,.ebullet,.boss-beam').forEach(e => e.remove());
     $game.classList.remove('fever', 'fever-lv2');
     clearTimeout(invincibleTimer);
     playerInvincible = false;
@@ -1938,7 +2107,7 @@ function runCountdown(cb) {
     timerEl.textContent = '0.00';
     timerEl.classList.remove('orange','red');
     document.getElementById('hudScore').textContent  = '💥 0体撃破';
-    document.getElementById('hudRemain').textContent = `残り ${cfg.spawnLimit}体`;
+    document.getElementById('hudRemain').textContent = cfg.boss ? '💀 BOSS' : `残り ${cfg.spawnLimit}体`;
 
     showScreen($game);
     showStageLabel(cfg.label, cfg.subtitle);
@@ -1950,8 +2119,13 @@ function runCountdown(cb) {
       playerY       = window.innerHeight - 80;
       updateShipPosition();
       startBGM();
-      for (let i = 0; i < INITIAL_SPAWN; i++) spawnItem();
-      spawnTimerId = setTimeout(spawnLoop, SPAWN_INTERVAL_MS);
+      if (cfg.boss) {
+        bossStageActive = true;
+        spawnBossStage5();
+      } else {
+        for (let i = 0; i < INITIAL_SPAWN; i++) spawnItem();
+        spawnTimerId = setTimeout(spawnLoop, SPAWN_INTERVAL_MS);
+      }
       fireBulletLoop();
       rafId = requestAnimationFrame(tickTimer);
     });
@@ -1968,10 +2142,13 @@ function runCountdown(cb) {
     clearTimeout(rapidFireEndTimer);
     clearTimeout(cooldownTimer);
     cooldownTimer = null;
+    bossStageActive = false;
+    clearTimeout(bossFaceRespawnTimer);
+    clearTimeout(bossHandRespawnTimer);
     bullets.forEach(b => b.el.remove()); bullets = [];
-    enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
+    enemies.forEach(e => { clearTimeout(e.shootTimer); clearTimeout(e.animTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
     enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
-    $game.querySelectorAll('.tap-item,.particle,.ebullet,.shard,.growth-up,.bullet').forEach(e => e.remove());
+    $game.querySelectorAll('.tap-item,.particle,.ebullet,.shard,.growth-up,.bullet,.boss-beam').forEach(e => e.remove());
     clearTimeout(invincibleTimer);
     playerInvincible = false;
     document.getElementById('playerShip').classList.remove('invincible');
@@ -2171,6 +2348,11 @@ function runCountdown(cb) {
     showStory(() => startGame());
   });
   document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); startGame(); });
+  document.getElementById('debugStartBtn').addEventListener('click', () => {
+    initAudio(); unlockBGM();
+    const n = parseInt(document.getElementById('debugStageNum').value) || 1;
+    if (n === 1) { showStory(() => startStage(1)); } else { startStage(n); }
+  });
   document.getElementById('nextStageBtn').addEventListener('click', () => {
     initAudio();
     const won = document.getElementById('nextStageBtn').textContent.includes('STAGE');
