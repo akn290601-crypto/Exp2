@@ -47,6 +47,22 @@
       filter: drop-shadow(0 4px 24px rgba(0,0,0,0.7));
     }
     .sub { color: #aaa; font-size: 0.9rem; margin-bottom: 28px; text-align: center; line-height: 1.6; }
+    .ship-power-card {
+      width: min(280px, 88vw);
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 12px 18px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .spc-title { font-size: 0.7rem; color: #aaa; letter-spacing: 0.15em; margin-bottom: 8px; }
+    .spc-row   { display: flex; justify-content: center; gap: 24px; margin-bottom: 6px; }
+    .spc-stat  { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .spc-label { font-size: 0.6rem; color: #888; letter-spacing: 0.1em; }
+    .spc-dots  { font-size: 0.85rem; color: #00ffee; letter-spacing: 2px; }
+    .spc-dots.pwr { color: #ff8800; }
+    .spc-kills { font-size: 0.65rem; color: #666; margin-top: 4px; }
 
     .btn {
       padding: 14px 36px;
@@ -847,6 +863,20 @@
 <div class="screen" id="nameScreen">
   <img src="logo_tokiwa.png" class="title-logo" alt="トキワ帝国の野望">
   <p class="sub">スライドで移動・自動射撃でトキワ兵を全滅させろ！</p>
+  <div class="ship-power-card">
+    <div class="spc-title">⚙️ 機体強化レベル</div>
+    <div class="spc-row">
+      <div class="spc-stat">
+        <span class="spc-label">SPEED</span>
+        <span class="spc-dots" id="titleSpdDots">●○○</span>
+      </div>
+      <div class="spc-stat">
+        <span class="spc-label">POWER</span>
+        <span class="spc-dots pwr" id="titlePwrDots">●○○</span>
+      </div>
+    </div>
+    <div class="spc-kills">累計撃破数 <span id="titleLtKills">0</span> 体</div>
+  </div>
   <button class="btn btn-primary" id="startBtn">ゲームスタート</button>
   <div class="lb-wrap" id="topLb"></div>
   <div class="lb-wrap" id="topEndingHistory"></div>
@@ -1012,8 +1042,9 @@
   let totalElapsed    = 0;
   let shipSpeedLv     = 1;
   let shipPowerLv     = 1;
-  const SPEED_UP_AT   = [15, 40];
-  const POWER_UP_AT   = [20, 55];
+  let ltKills         = +localStorage.getItem('ltKills') || 0;
+  const SPEED_UP_AT   = [80, 300];
+  const POWER_UP_AT   = [120, 450];
 
   const $name       = document.getElementById('nameScreen');
   const $game       = document.getElementById('gameScreen');
@@ -1224,16 +1255,41 @@
     setTimeout(() => el.remove(), 1100);
   }
 
+  function calcLevels() {
+    return {
+      spd: ltKills >= SPEED_UP_AT[1] ? 3 : ltKills >= SPEED_UP_AT[0] ? 2 : 1,
+      pwr: ltKills >= POWER_UP_AT[1] ? 3 : ltKills >= POWER_UP_AT[0] ? 2 : 1
+    };
+  }
+
+  function initShipFromSave() {
+    const lv = calcLevels();
+    shipSpeedLv = lv.spd;
+    shipPowerLv = lv.pwr;
+    updateShipStats();
+    updateTitleShipCard();
+  }
+
+  function updateTitleShipCard() {
+    const dots = (n) => '●'.repeat(n) + '○'.repeat(3 - n);
+    const sd = document.getElementById('titleSpdDots');
+    const pd = document.getElementById('titlePwrDots');
+    const kd = document.getElementById('titleLtKills');
+    if (sd) sd.textContent = dots(shipSpeedLv);
+    if (pd) pd.textContent = dots(shipPowerLv);
+    if (kd) kd.textContent = ltKills;
+  }
+
   function checkShipGrowth() {
-    const total = totalScore + score;
-    const newSpd = total >= SPEED_UP_AT[1] ? 3 : total >= SPEED_UP_AT[0] ? 2 : 1;
-    const newPwr = total >= POWER_UP_AT[1] ? 3 : total >= POWER_UP_AT[0] ? 2 : 1;
-    if (newSpd > shipSpeedLv) {
-      shipSpeedLv = newSpd;
+    ltKills++;
+    if (ltKills % 10 === 0) localStorage.setItem('ltKills', ltKills);
+    const lv = calcLevels();
+    if (lv.spd > shipSpeedLv) {
+      shipSpeedLv = lv.spd;
       showGrowthUp(`⚡ SPEED Lv${shipSpeedLv}`, 'spd');
     }
-    if (newPwr > shipPowerLv) {
-      shipPowerLv = newPwr;
+    if (lv.pwr > shipPowerLv) {
+      shipPowerLv = lv.pwr;
       showGrowthUp(`🔥 POWER Lv${shipPowerLv}`, 'pwr');
     }
     updateShipStats();
@@ -1871,9 +1927,8 @@ function runCountdown(cb) {
     recentKills      = [];
     if (stageNum === 1) {
       totalScore = 0; totalElapsed = 0; playerLives = 3; updateLivesHUD();
-      shipSpeedLv = 1; shipPowerLv = 1;
     }
-    updateShipStats();
+    initShipFromSave();
     gameEndType          = '';
     speedBoostCount      = 0;
     speedBoostNextThresh = 5;
@@ -1939,6 +1994,7 @@ function runCountdown(cb) {
     stopBGM();
 
     totalScore += score;
+    localStorage.setItem('ltKills', ltKills);
 
     // ライフ切れ → ゲームオーバー（即リザルト）
     if (!gameWon) {
@@ -2171,6 +2227,7 @@ function runCountdown(cb) {
   (async () => {
     renderLb('topLb');
     renderEndingHistory('topEndingHistory');
+    initShipFromSave();
     heroImgSrcs = (await Promise.all(
       HERO_SRCS.map(src => new Promise(resolve => {
         const img = new Image();
