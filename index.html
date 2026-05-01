@@ -1019,6 +1019,7 @@
   let lastTapTime       = 0;
   let tapCount          = 0;
   let rapidFireEndTimer = null;
+  let cooldownTimer     = null;
   let rapidFireStartMs  = 0;
   let cooldownStartMs   = 0;
   const RAPID_DURATION  = 3000;
@@ -1585,7 +1586,7 @@
       cooldownStartMs   = Date.now();
       clearTimeout(fireTimer);
       fireBulletLoop();
-      setTimeout(() => { doubleTapLocked = false; tapCount = 0; }, COOLDOWN_DURATION);
+      cooldownTimer = setTimeout(() => { doubleTapLocked = false; tapCount = 0; cooldownTimer = null; }, COOLDOWN_DURATION);
     }, RAPID_DURATION);
   }
 
@@ -1926,6 +1927,8 @@ function runCountdown(cb) {
     lastTapTime     = 0;
     tapCount        = 0;
     clearTimeout(rapidFireEndTimer);
+    clearTimeout(cooldownTimer);
+    cooldownTimer   = null;
     fireTimer = null;
     bullets.forEach(b => b.el.remove()); bullets = [];
     enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
@@ -1969,6 +1972,8 @@ function runCountdown(cb) {
     rapidFireLevel  = 0;
     doubleTapLocked = false;
     clearTimeout(rapidFireEndTimer);
+    clearTimeout(cooldownTimer);
+    cooldownTimer = null;
     bullets.forEach(b => b.el.remove()); bullets = [];
     enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
     enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
