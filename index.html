@@ -571,6 +571,39 @@
     }
     /* ライフ表示 */
     #hudLives { font-size: 1.1rem; letter-spacing: 2px; }
+
+    /* 連射バー */
+    .rapid-bar-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      width: 90px;
+    }
+    .rapid-bar-label {
+      font-size: 0.55rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+      color: #888;
+    }
+    .rapid-bar-label.active   { color: #ffdd00; }
+    .rapid-bar-label.cooldown { color: #ff6600; }
+    .rapid-bar-track {
+      width: 100%;
+      height: 5px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .rapid-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      width: 0%;
+      background: linear-gradient(to right, #00ffee, #00bbff);
+    }
+    .rapid-bar-fill.active   { background: linear-gradient(to right, #ffdd00, #ff4400); }
+    .rapid-bar-fill.cooldown { background: linear-gradient(to right, #ff6600, #ff2200); }
     /* ── Charge bar ── */
     /* ── Bullets ── */
     .bullet {
@@ -808,8 +841,14 @@
   <div id="countdown"></div>
   <div class="game-hud">
     <div class="hud-timer" id="hudTimer">0.00</div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
       <div id="hudLives">❤️❤️❤️</div>
+      <div class="rapid-bar-wrap">
+        <div class="rapid-bar-label" id="rapidBarLabel">W-TAP 連射</div>
+        <div class="rapid-bar-track">
+          <div class="rapid-bar-fill" id="rapidBarFill"></div>
+        </div>
+      </div>
     </div>
     <div class="hud-right">
       <div class="hud-power"  id="hudPower"></div>
@@ -918,11 +957,15 @@
   let playerInvincible = false;
   let invincibleTimer  = null;
   let fireTimer        = null;
-  let rapidFireLevel   = 0;
-  let doubleTapLocked  = false;
-  let lastTapTime      = 0;
-  let tapCount         = 0;
+  let rapidFireLevel    = 0;
+  let doubleTapLocked   = false;
+  let lastTapTime       = 0;
+  let tapCount          = 0;
   let rapidFireEndTimer = null;
+  let rapidFireStartMs  = 0;
+  let cooldownStartMs   = 0;
+  const RAPID_DURATION  = 3000;
+  const COOLDOWN_DURATION = 5000;
   let currentStageNum = 1;
   let totalScore      = 0;
   let totalElapsed    = 0;
@@ -1409,19 +1452,21 @@
   function triggerRapidFire(level) {
     if (doubleTapLocked || gameOver || !startTime) return;
     if (level <= rapidFireLevel) return;
-    rapidFireLevel = level;
+    rapidFireLevel   = level;
+    rapidFireStartMs = Date.now();
     navigator.vibrate?.(level >= 2 ? [15,5,15,5,15,5,15] : [15,5,15,5,15]);
     playRapidStart();
     clearTimeout(rapidFireEndTimer);
     clearTimeout(fireTimer);
     fireBulletLoop();
     rapidFireEndTimer = setTimeout(() => {
-      rapidFireLevel  = 0;
-      doubleTapLocked = true;
+      rapidFireLevel    = 0;
+      doubleTapLocked   = true;
+      cooldownStartMs   = Date.now();
       clearTimeout(fireTimer);
       fireBulletLoop();
-      setTimeout(() => { doubleTapLocked = false; tapCount = 0; }, 3000);
-    }, 1000);
+      setTimeout(() => { doubleTapLocked = false; tapCount = 0; }, COOLDOWN_DURATION);
+    }, RAPID_DURATION);
   }
 
   function updateBullets() {
@@ -1549,6 +1594,31 @@
   }
 
 /* ── タイマー ── */
+  function updateRapidBar() {
+    const fill  = document.getElementById('rapidBarFill');
+    const label = document.getElementById('rapidBarLabel');
+    if (!fill) return;
+    const now = Date.now();
+    if (rapidFireLevel > 0) {
+      const pct = Math.max(0, 1 - (now - rapidFireStartMs) / RAPID_DURATION);
+      fill.style.width  = (pct * 100) + '%';
+      fill.className    = 'rapid-bar-fill active';
+      label.textContent = rapidFireLevel >= 2 ? '🔥MAX連射中' : '⚡連射中';
+      label.className   = 'rapid-bar-label active';
+    } else if (doubleTapLocked) {
+      const pct = Math.min(1, (now - cooldownStartMs) / COOLDOWN_DURATION);
+      fill.style.width  = (pct * 100) + '%';
+      fill.className    = 'rapid-bar-fill cooldown';
+      label.textContent = 'チャージ中…';
+      label.className   = 'rapid-bar-label cooldown';
+    } else {
+      fill.style.width  = '100%';
+      fill.className    = 'rapid-bar-fill';
+      label.textContent = 'W-TAP 連射';
+      label.className   = 'rapid-bar-label';
+    }
+  }
+
   function tickTimer() {
     if (!gameOver) {
       const elapsed    = startTime ? (Date.now() - startTime) / 1000 : 0;
@@ -1561,6 +1631,7 @@
       updateBullets();
       updateEnemies();
       updateEnemyBullets();
+      updateRapidBar();
       checkCollisions();
       checkPlayerHit();
       if (remaining <= 0 && !gameOver) {
