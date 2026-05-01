@@ -1263,7 +1263,7 @@
 
   function checkShipGrowth() {
     ltKills++;
-    if (ltKills % 10 === 0) localStorage.setItem('ltKills', ltKills);
+    if (ltKills % 10 === 0) try { localStorage.setItem('ltKills', ltKills); } catch (_) {}
     const lv = calcLevels();
     if (lv.spd > shipSpeedLv) {
       shipSpeedLv = lv.spd;
@@ -1979,7 +1979,7 @@ function runCountdown(cb) {
     stopBGM();
 
     totalScore += score;
-    localStorage.setItem('ltKills', ltKills);
+    try { localStorage.setItem('ltKills', ltKills); } catch (_) {}
 
     // ライフ切れ → ゲームオーバー（即リザルト）
     if (!gameWon) {
@@ -2033,7 +2033,7 @@ function runCountdown(cb) {
       if (!a.won && b.won) return 1;
       return b.score - a.score; // 撃破数多い順
     });
-    localStorage.setItem('tg_v3', JSON.stringify(list.slice(0, 20)));
+    try { localStorage.setItem('tg_v3', JSON.stringify(list.slice(0, 20))); } catch (_) {}
   }
   function scoreRankOf(count) {
     return loadScores().filter(r => r.score > count).length + 1;
@@ -2065,7 +2065,7 @@ function runCountdown(cb) {
   }
   function saveEnding(type) {
     const e = loadEndings(); e[type] = (e[type] || 0) + 1;
-    localStorage.setItem('tg_endings', JSON.stringify(e));
+    try { localStorage.setItem('tg_endings', JSON.stringify(e)); } catch (_) {}
   }
   function renderEndingHistory(id) {
     const e = loadEndings();
