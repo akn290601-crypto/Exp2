@@ -918,9 +918,11 @@
   let playerInvincible = false;
   let invincibleTimer  = null;
   let fireTimer        = null;
-  let rapidFireMode    = false;
+  let rapidFireLevel   = 0;
   let doubleTapLocked  = false;
   let lastTapTime      = 0;
+  let tapCount         = 0;
+  let rapidFireEndTimer = null;
   let currentStageNum = 1;
   let totalScore      = 0;
   let totalElapsed    = 0;
@@ -1369,7 +1371,8 @@
   }
 
   function getFireInterval() {
-    if (rapidFireMode) return 65;
+    if (rapidFireLevel >= 2) return 35;
+    if (rapidFireLevel >= 1) return 65;
     if ($game.classList.contains('fever-lv2')) return 140;
     if ($game.classList.contains('fever')) return 200;
     return 280;
@@ -1403,19 +1406,21 @@
     fireTimer = setTimeout(fireBulletLoop, getFireInterval());
   }
 
-  function triggerRapidFire() {
-    if (rapidFireMode || doubleTapLocked || gameOver || !startTime) return;
-    rapidFireMode = true;
-    navigator.vibrate?.([15, 5, 15, 5, 15]);
+  function triggerRapidFire(level) {
+    if (doubleTapLocked || gameOver || !startTime) return;
+    if (level <= rapidFireLevel) return;
+    rapidFireLevel = level;
+    navigator.vibrate?.(level >= 2 ? [15,5,15,5,15,5,15] : [15,5,15,5,15]);
     playRapidStart();
+    clearTimeout(rapidFireEndTimer);
     clearTimeout(fireTimer);
     fireBulletLoop();
-    setTimeout(() => {
-      rapidFireMode   = false;
+    rapidFireEndTimer = setTimeout(() => {
+      rapidFireLevel  = 0;
       doubleTapLocked = true;
       clearTimeout(fireTimer);
       fireBulletLoop();
-      setTimeout(() => { doubleTapLocked = false; }, 3000);
+      setTimeout(() => { doubleTapLocked = false; tapCount = 0; }, 3000);
     }, 1000);
   }
 
@@ -1448,7 +1453,7 @@
         enemies.splice(i, 1);
         continue;
       }
-      const shakeX = e.src === 'IMG_3777.png' ? Math.sin(Date.now() / 50) * 6 : 0;
+      const shakeX = Math.sin(Date.now() / 50) * 6;
       e.el.style.left = (e.x + shakeX) + 'px';
       e.el.style.top  = e.y + 'px';
     }
@@ -1715,9 +1720,11 @@ function runCountdown(cb) {
     recentKillsSpeed     = [];
     clearTimeout(feverTimer);
     clearTimeout(fireTimer);
-    rapidFireMode   = false;
+    rapidFireLevel  = 0;
     doubleTapLocked = false;
     lastTapTime     = 0;
+    tapCount        = 0;
+    clearTimeout(rapidFireEndTimer);
     fireTimer = null;
     bullets.forEach(b => b.el.remove()); bullets = [];
     enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
@@ -1758,8 +1765,9 @@ function runCountdown(cb) {
     stopTimer();
     clearTimeout(fireTimer);
     fireTimer       = null;
-    rapidFireMode   = false;
+    rapidFireLevel  = 0;
     doubleTapLocked = false;
+    clearTimeout(rapidFireEndTimer);
     bullets.forEach(b => b.el.remove()); bullets = [];
     enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
     enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
@@ -1987,8 +1995,10 @@ function runCountdown(cb) {
   document.getElementById('gameScreen').addEventListener('pointerdown', (e) => {
     moveShip(e);
     const now = Date.now();
-    if (now - lastTapTime < 300) triggerRapidFire();
+    if (now - lastTapTime < 300) { tapCount++; } else { tapCount = 1; }
     lastTapTime = now;
+    if (tapCount === 2) triggerRapidFire(1);
+    else if (tapCount >= 3) triggerRapidFire(2);
   });
   document.getElementById('gameScreen').addEventListener('pointermove', moveShip);
   document.getElementById('backBtn').addEventListener('click', () => {
