@@ -1006,15 +1006,15 @@
   const STAGE_TIME_S      = 28;
   const STAGE_CONFIGS = [
     { num: 1, label: 'STAGE 1', subtitle: 'パラレルの男', spawnLimit: 45,
-      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.4, vyMax: 0.8, duration: 28 },
+      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.4, vyMax: 0.8, duration: 28, bg: 'IMG_3781.png' },
     { num: 2, label: 'STAGE 2', subtitle: 'ツインタワー', spawnLimit: 55,
-      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.6, vyMax: 1.1, duration: 28 },
+      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.6, vyMax: 1.1, duration: 28, bg: 'IMG_3782.png' },
     { num: 3, label: 'STAGE 3', subtitle: '俺つらぬく', spawnLimit: 60,
-      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.9, vyMax: 1.5, duration: 28 },
+      srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.9, vyMax: 1.5, duration: 28, bg: 'IMG_3783.png' },
     { num: 4, label: 'STAGE 4', subtitle: '漢', spawnLimit: 70,
-      srcs: ['IMG_3775.png','IMG_3756.png','IMG_3777.png'], vyMin: 1.2, vyMax: 2.0, duration: 28 },
+      srcs: ['IMG_3775.png','IMG_3756.png','IMG_3777.png'], vyMin: 1.2, vyMax: 2.0, duration: 28, bg: 'IMG_3753.png' },
     { num: 5, label: 'STAGE 5', subtitle: 'RK-001', spawnLimit: 999, boss: true,
-      srcs: ['IMG_3784.png','IMG_3786.png'], vyMin: 0, vyMax: 0, duration: 60 },
+      srcs: ['IMG_3784.png','IMG_3786.png'], vyMin: 0, vyMax: 0, duration: 60, bg: 'IMG_3753.png' },
   ];
 
   let heroImgSrcs    = [];
@@ -1043,8 +1043,8 @@
   let invincibleTimer  = null;
 
   /* ── Stage 5 boss state ── */
-  const BOSS_FACE_SIZE  = 150;
-  const BOSS_HAND_SIZE  = 120;
+  const BOSS_FACE_SIZE  = 170;
+  const BOSS_HAND_SIZE  = 105;
   const BOSS_FACE_HP    = 20;
   const BOSS_HAND_HP    = 30;
   let bossStageActive        = false;
@@ -1974,9 +1974,10 @@
     el.appendChild(overlay);
 
     const img = document.createElement('img');
-    img.src = type === 'face' ? 'IMG_3786.png' : 'IMG_3784.png';
+    img.src = type === 'face' ? 'IMG_3786.png'
+            : type === 'hand_l' ? 'IMG_3785.png'
+            : 'IMG_3784.png';
     img.draggable = false;
-    if (type === 'hand_l') img.style.transform = 'scaleX(-1)';
     el.appendChild(img);
 
     el.style.width  = size + 'px';
@@ -1992,7 +1993,7 @@
     const enemy = {
       el, x, y, vx: 0, vy: 0, size, hp,
       shootTimer: null, animTimer: null,
-      src: type === 'face' ? 'IMG_3786.png' : 'IMG_3784.png',
+      src: type === 'face' ? 'IMG_3786.png' : type === 'hand_l' ? 'IMG_3785.png' : 'IMG_3784.png',
       fixed: true, bossType: type, handPhase: false
     };
     enemies.push(enemy);
@@ -2043,8 +2044,9 @@
     if (gameOver || !enemy.el.isConnected) return;
     const img = enemy.el.querySelector('img');
     if (img) {
-      img.src = enemy.handPhase ? 'IMG_3785.png' : 'IMG_3784.png';
-      if (enemy.bossType === 'hand_l') img.style.transform = 'scaleX(-1)';
+      img.src = enemy.bossType === 'hand_l'
+        ? (enemy.handPhase ? 'IMG_3785.png' : 'IMG_3785.png')
+        : (enemy.handPhase ? 'IMG_3784.png' : 'IMG_3784.png');
       enemy.handPhase = !enemy.handPhase;
     }
     enemy.animTimer = setTimeout(() => bossHandAnimate(enemy), 700);
@@ -2127,6 +2129,7 @@ function runCountdown(cb) {
     document.getElementById('hudScore').textContent  = '💥 0体撃破';
     document.getElementById('hudRemain').textContent = cfg.boss ? '💀 BOSS' : `残り ${cfg.spawnLimit}体`;
 
+    document.getElementById('gameBg').style.backgroundImage = `url('${cfg.bg || 'IMG_3753.png'}')`;
     showScreen($game);
     showStageLabel(cfg.label, cfg.subtitle);
     setTimeout(() => playStageUp(), 100);
