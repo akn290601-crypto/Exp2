@@ -630,7 +630,6 @@
       color: #888;
     }
     .rapid-bar-label.active   { color: #ffdd00; }
-    .rapid-bar-label.active2  { color: #ff3300; }
     .rapid-bar-label.cooldown { color: #ff6600; }
     .rapid-bar-track {
       width: 100%;
@@ -646,7 +645,6 @@
       background: linear-gradient(to right, #00ffee, #00bbff);
     }
     .rapid-bar-fill.active   { background: linear-gradient(to right, #ffdd00, #ff4400); }
-    .rapid-bar-fill.active2  { background: linear-gradient(to right, #ff2200, #ff0000); }
     .rapid-bar-fill.cooldown { background: linear-gradient(to right, #ff6600, #ff2200); }
     /* ── Charge bar ── */
     /* ── Bullets ── */
@@ -665,10 +663,6 @@
     .bullet.rapid {
       background: #ffffff;
       box-shadow: 0 0 8px 2px rgba(255,255,255,0.9);
-    }
-    .bullet.rapid-lv2 {
-      background: linear-gradient(to top, #ff2200, #ff8800);
-      box-shadow: 0 0 10px 3px rgba(255,60,0,0.9);
     }
 
     /* ── Power-up items ── */
@@ -1021,7 +1015,7 @@
   let cooldownTimer     = null;
   let rapidFireStartMs  = 0;
   let cooldownStartMs   = 0;
-  const RAPID_DURATION  = 3000;
+  const RAPID_DURATION  = 2000;
   const COOLDOWN_DURATION = 5000;
   let currentStageNum = 1;
   let totalScore      = 0;
@@ -1532,7 +1526,6 @@
   }
 
   function getFireInterval() {
-    if (rapidFireLevel >= 2) return 32;
     if (rapidFireLevel >= 1) return 65;
     if ($game.classList.contains('fever-lv2')) return 140;
     if ($game.classList.contains('fever')) return 200;
@@ -1545,7 +1538,7 @@
     const y = playerY - 32 - bh;
     const makeEl = (x) => {
       const el = document.createElement('div');
-      el.className = 'bullet' + (rapidFireLevel >= 2 ? ' rapid-lv2' : rapidFireLevel >= 1 ? ' rapid' : '');
+      el.className = 'bullet' + (rapidFireLevel >= 1 ? ' rapid' : '');
       el.style.transform = `translate(${x - bw / 2}px,${y}px)`;
       $game.appendChild(el);
       return el;
@@ -1719,13 +1712,7 @@
     const label = document.getElementById('rapidBarLabel');
     if (!fill) return;
     const now = Date.now();
-    if (rapidFireLevel >= 2) {
-      const pct = Math.max(0, 1 - (now - rapidFireStartMs) / RAPID_DURATION);
-      fill.style.width  = (pct * 100) + '%';
-      fill.className    = 'rapid-bar-fill active2';
-      label.textContent = '🔴MAX連射中';
-      label.className   = 'rapid-bar-label active2';
-    } else if (rapidFireLevel >= 1) {
+    if (rapidFireLevel >= 1) {
       const pct = Math.max(0, 1 - (now - rapidFireStartMs) / RAPID_DURATION);
       fill.style.width  = (pct * 100) + '%';
       fill.className    = 'rapid-bar-fill active';
@@ -1866,7 +1853,7 @@
   function spawnLoop() {
     const cfg = STAGE_CONFIGS[currentStageNum - 1];
     if (gameOver || totalSpawned >= cfg.spawnLimit) return;
-    spawnItem();
+    if (enemies.length < 14) spawnItem();
     if (totalSpawned < cfg.spawnLimit) {
       spawnTimerId = setTimeout(spawnLoop, getSpawnInterval());
     }
@@ -2204,7 +2191,6 @@ function runCountdown(cb) {
     if (now - lastTapTime < 300) { tapCount++; } else { tapCount = 1; }
     lastTapTime = now;
     if (tapCount === 2) triggerRapidFire(1);
-    else if (tapCount >= 5) triggerRapidFire(2);
   });
   document.getElementById('gameScreen').addEventListener('pointermove', moveShip);
   document.getElementById('backBtn').addEventListener('click', () => {
