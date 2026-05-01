@@ -1974,7 +1974,7 @@
     el.appendChild(overlay);
 
     const img = document.createElement('img');
-    img.src = type === 'face' ? 'IMG_3784.png' : 'IMG_3786.png';
+    img.src = type === 'face' ? 'IMG_3786.png' : 'IMG_3784.png';
     img.draggable = false;
     if (type === 'hand_l') img.style.transform = 'scaleX(-1)';
     el.appendChild(img);
@@ -1992,7 +1992,7 @@
     const enemy = {
       el, x, y, vx: 0, vy: 0, size, hp,
       shootTimer: null, animTimer: null,
-      src: type === 'face' ? 'IMG_3784.png' : 'IMG_3786.png',
+      src: type === 'face' ? 'IMG_3786.png' : 'IMG_3784.png',
       fixed: true, bossType: type, handPhase: false
     };
     enemies.push(enemy);
@@ -2009,7 +2009,7 @@
   function bossBeamAttack(enemy) {
     if (gameOver || !enemy.el.isConnected) return;
     const img = enemy.el.querySelector('img');
-    if (img) img.src = 'IMG_3785.png';
+    if (img) img.src = 'IMG_3787.png';
 
     const bx = enemy.x + enemy.size * 0.25;
     const bw = enemy.size * 0.5;
@@ -2032,7 +2032,7 @@
     setTimeout(() => {
       clearInterval(beamCheckId);
       beam.remove();
-      if (img && enemy.el.isConnected) img.src = 'IMG_3784.png';
+      if (img && enemy.el.isConnected) img.src = 'IMG_3786.png';
       if (!gameOver && enemy.el.isConnected && !enemy.el.classList.contains('bursting')) {
         enemy.shootTimer = setTimeout(() => bossBeamAttack(enemy), 2500 + Math.random() * 1500);
       }
@@ -2043,7 +2043,7 @@
     if (gameOver || !enemy.el.isConnected) return;
     const img = enemy.el.querySelector('img');
     if (img) {
-      img.src = enemy.handPhase ? 'IMG_3787.png' : 'IMG_3786.png';
+      img.src = enemy.handPhase ? 'IMG_3785.png' : 'IMG_3784.png';
       if (enemy.bossType === 'hand_l') img.style.transform = 'scaleX(-1)';
       enemy.handPhase = !enemy.handPhase;
     }
