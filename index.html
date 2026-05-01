@@ -1044,12 +1044,13 @@
 
   /* ── Stage 5 boss state ── */
   const BOSS_FACE_SIZE  = 150;
-  const BOSS_HAND_SIZE  = 130;
+  const BOSS_HAND_SIZE  = 120;
   const BOSS_FACE_HP    = 20;
   const BOSS_HAND_HP    = 30;
-  let bossStageActive       = false;
-  let bossFaceRespawnTimer  = null;
-  let bossHandRespawnTimer  = null;
+  let bossStageActive        = false;
+  let bossFaceRespawnTimer   = null;
+  let bossHandRRespawnTimer  = null;
+  let bossHandLRespawnTimer  = null;
   let fireTimer        = null;
   let rapidFireLevel    = 0;
   let doubleTapLocked   = false;
@@ -1907,15 +1908,19 @@
         el.remove();
         // ボスは一定時間後に復活
         if (bossType && bossStageActive && !gameOver) {
-          const W = window.innerWidth, hudH = cachedHudH;
-          const faceY = hudH + 10;
+          const W = window.innerWidth;
+          const faceY = cachedHudH + 10;
           if (bossType === 'face') {
             bossFaceRespawnTimer = setTimeout(() => {
               if (!gameOver && bossStageActive) spawnBossEnemy('face', (W - BOSS_FACE_SIZE) / 2, faceY, BOSS_FACE_SIZE, BOSS_FACE_HP);
             }, 2500);
-          } else {
-            bossHandRespawnTimer = setTimeout(() => {
-              if (!gameOver && bossStageActive) spawnBossEnemy('hand', (W - BOSS_HAND_SIZE) / 2, faceY + BOSS_FACE_SIZE + 10, BOSS_HAND_SIZE, BOSS_HAND_HP);
+          } else if (bossType === 'hand_r') {
+            bossHandRRespawnTimer = setTimeout(() => {
+              if (!gameOver && bossStageActive) { const { rx, y } = bossBothHandPos(); spawnBossEnemy('hand_r', rx, y, BOSS_HAND_SIZE, BOSS_HAND_HP); }
+            }, 2500);
+          } else if (bossType === 'hand_l') {
+            bossHandLRespawnTimer = setTimeout(() => {
+              if (!gameOver && bossStageActive) { const { lx, y } = bossBothHandPos(); spawnBossEnemy('hand_l', lx, y, BOSS_HAND_SIZE, BOSS_HAND_HP); }
             }, 2500);
           }
         }
@@ -1939,13 +1944,23 @@
   }
 
   /* ── Stage 5 ボス生成 ── */
+  function bossBothHandPos() {
+    const W = window.innerWidth, gap = 14;
+    const total = BOSS_HAND_SIZE * 2 + gap;
+    const lx = (W - total) / 2;
+    const rx = lx + BOSS_HAND_SIZE + gap;
+    const y  = cachedHudH + 10 + BOSS_FACE_SIZE + 8;
+    return { lx, rx, y };
+  }
+
   function spawnBossStage5() {
     if (gameOver) return;
     const W    = window.innerWidth;
-    const hudH = cachedHudH;
-    const faceY = hudH + 10;
-    spawnBossEnemy('face', (W - BOSS_FACE_SIZE) / 2, faceY, BOSS_FACE_SIZE, BOSS_FACE_HP);
-    spawnBossEnemy('hand', (W - BOSS_HAND_SIZE) / 2, faceY + BOSS_FACE_SIZE + 10, BOSS_HAND_SIZE, BOSS_HAND_HP);
+    const faceY = cachedHudH + 10;
+    spawnBossEnemy('face',   (W - BOSS_FACE_SIZE) / 2, faceY, BOSS_FACE_SIZE, BOSS_FACE_HP);
+    const { lx, rx, y } = bossBothHandPos();
+    spawnBossEnemy('hand_r', rx, y, BOSS_HAND_SIZE, BOSS_HAND_HP);
+    spawnBossEnemy('hand_l', lx, y, BOSS_HAND_SIZE, BOSS_HAND_HP);
   }
 
   function spawnBossEnemy(type, x, y, size, hp) {
@@ -1961,6 +1976,7 @@
     const img = document.createElement('img');
     img.src = type === 'face' ? 'IMG_3784.png' : 'IMG_3786.png';
     img.draggable = false;
+    if (type === 'hand_l') img.style.transform = 'scaleX(-1)';
     el.appendChild(img);
 
     el.style.width  = size + 'px';
@@ -1972,6 +1988,7 @@
     el.addEventListener('animationend', () => el.classList.remove('spawning'), { once: true });
     $game.appendChild(el);
 
+    const isHand = type === 'hand_r' || type === 'hand_l';
     const enemy = {
       el, x, y, vx: 0, vy: 0, size, hp,
       shootTimer: null, animTimer: null,
@@ -2027,6 +2044,7 @@
     const img = enemy.el.querySelector('img');
     if (img) {
       img.src = enemy.handPhase ? 'IMG_3787.png' : 'IMG_3786.png';
+      if (enemy.bossType === 'hand_l') img.style.transform = 'scaleX(-1)';
       enemy.handPhase = !enemy.handPhase;
     }
     enemy.animTimer = setTimeout(() => bossHandAnimate(enemy), 700);
@@ -2091,7 +2109,7 @@ function runCountdown(cb) {
     fireTimer = null;
     bossStageActive = false;
     clearTimeout(bossFaceRespawnTimer);
-    clearTimeout(bossHandRespawnTimer);
+    clearTimeout(bossHandRRespawnTimer); clearTimeout(bossHandLRespawnTimer);
     bullets.forEach(b => b.el.remove()); bullets = [];
     enemies.forEach(e => { clearTimeout(e.shootTimer); clearTimeout(e.animTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
     enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
@@ -2144,7 +2162,7 @@ function runCountdown(cb) {
     cooldownTimer = null;
     bossStageActive = false;
     clearTimeout(bossFaceRespawnTimer);
-    clearTimeout(bossHandRespawnTimer);
+    clearTimeout(bossHandRRespawnTimer); clearTimeout(bossHandLRespawnTimer);
     bullets.forEach(b => b.el.remove()); bullets = [];
     enemies.forEach(e => { clearTimeout(e.shootTimer); clearTimeout(e.animTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
     enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
