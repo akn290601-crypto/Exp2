@@ -1945,11 +1945,10 @@
 
   /* ── Stage 5 ボス生成 ── */
   function bossBothHandPos() {
-    const W = window.innerWidth, gap = 14;
-    const total = BOSS_HAND_SIZE * 2 + gap;
-    const lx = (W - total) / 2;
-    const rx = lx + BOSS_HAND_SIZE + gap;
-    const y  = cachedHudH + 10 + BOSS_FACE_SIZE + 8;
+    const W = window.innerWidth, margin = 12;
+    const lx = margin;
+    const rx = W - BOSS_HAND_SIZE - margin;
+    const y  = cachedHudH + 10 + BOSS_FACE_SIZE - 10;
     return { lx, rx, y };
   }
 
