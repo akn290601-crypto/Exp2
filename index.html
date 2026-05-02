@@ -1890,6 +1890,65 @@
     $game.appendChild(el);
     setTimeout(() => el.remove(), 2200);
   }
+  function playBossGlitchDie() {
+    try {
+      const ctx = getCtx(); if (!ctx) return;
+      const t = ctx.currentTime;
+
+      // ① 最初の衝撃ノイズ（0〜0.4s）
+      const bufLen = Math.floor(ctx.sampleRate * 0.4);
+      const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufLen, 0.4);
+      const noise = ctx.createBufferSource();
+      const nFlt = ctx.createBiquadFilter(); nFlt.type = 'lowpass'; nFlt.frequency.value = 3000;
+      const nGain = ctx.createGain();
+      noise.buffer = buf;
+      noise.connect(nFlt); nFlt.connect(nGain); nGain.connect(ctx.destination);
+      nGain.gain.setValueAtTime(1.2, t);
+      nGain.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+      noise.start(t);
+
+      // ② グリッチ音（ノコギリ波、断続的ピッチ変化 0〜2s）
+      const glitchFreqs = [880,440,1200,220,660,1760,110,880,330,1320,440,55];
+      glitchFreqs.forEach((freq, i) => {
+        const osc = ctx.createOscillator(), g = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.connect(g); g.connect(ctx.destination);
+        const start = t + i * 0.16;
+        const dur   = 0.12;
+        osc.frequency.setValueAtTime(freq, start);
+        g.gain.setValueAtTime(0, start);
+        g.gain.linearRampToValueAtTime(0.35, start + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, start + dur);
+        osc.start(start); osc.stop(start + dur);
+      });
+
+      // ③ 低音ピッチダウン（0〜2.5s）
+      const osc2 = ctx.createOscillator(), g2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.connect(g2); g2.connect(ctx.destination);
+      osc2.frequency.setValueAtTime(200, t);
+      osc2.frequency.exponentialRampToValueAtTime(18, t + 2.5);
+      g2.gain.setValueAtTime(0.7, t);
+      g2.gain.setValueAtTime(0.7, t + 0.5);
+      g2.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
+      osc2.start(t); osc2.stop(t + 2.5);
+
+      // ④ デジタルクラックル（クリック音の連続 0.3〜2.3s）
+      for (let i = 0; i < 18; i++) {
+        const clickT = t + 0.3 + i * 0.11 + Math.random() * 0.05;
+        const osc3 = ctx.createOscillator(), g3 = ctx.createGain();
+        osc3.type = 'square';
+        osc3.frequency.value = 80 + Math.random() * 3000;
+        osc3.connect(g3); g3.connect(ctx.destination);
+        g3.gain.setValueAtTime(0.25, clickT);
+        g3.gain.exponentialRampToValueAtTime(0.001, clickT + 0.06);
+        osc3.start(clickT); osc3.stop(clickT + 0.07);
+      }
+    } catch (_) {}
+  }
+
   function playStageUp() {
     try {
       const ctx = getCtx(); if (!ctx) return;
@@ -2075,7 +2134,8 @@
         e.el.classList.add('boss-dying');
       }
     });
-    // 連続シェイク
+    // 連続シェイク＋効果音
+    playBossGlitchDie();
     [0, 400, 800, 1300, 1900, 2500].forEach(t =>
       setTimeout(() => { shakeScreen(); navigator.vibrate?.(80); }, t)
     );
