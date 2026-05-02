@@ -875,6 +875,35 @@
     .stg-num  { font-size: 1rem; color: #00ccff; letter-spacing: 0.2em; margin-bottom: 6px; }
     .stg-res  { font-size: 3rem; font-weight: 900; margin: 8px 0; }
     .stg-detail { font-size: 1rem; color: #aaa; margin-bottom: 4px; }
+
+    /* ── エンドロール ── */
+    #endrollScreen {
+      background: #000;
+      overflow: hidden;
+      position: relative;
+    }
+    #endrollFade {
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, #000 0%, transparent 18%, transparent 80%, #000 100%);
+      z-index: 2; pointer-events: none;
+    }
+    #endrollTrack {
+      position: absolute;
+      width: 100%;
+      text-align: center;
+      animation: endroll-scroll linear forwards;
+      z-index: 1;
+    }
+    @keyframes endroll-scroll {
+      from { transform: translateY(100vh); }
+      to   { transform: translateY(-100%); }
+    }
+    .er-block { padding: 4px 0; }
+    .er-spacer { height: 48px; }
+    .er-fin  { font-size: 1.3rem; color: #ffffff; letter-spacing: 0.25em; font-weight: 700; padding: 12px 0; }
+    .er-title { font-size: 2rem; color: #ffdd44; font-weight: 900; letter-spacing: 0.1em; padding: 8px 0; }
+    .er-section { font-size: 0.85rem; color: #88aacc; letter-spacing: 0.3em; text-transform: uppercase; }
+    .er-name  { font-size: 1.4rem; color: #ffffff; font-weight: 600; padding: 4px 0 20px; }
   </style>
 </head>
 <body>
@@ -999,6 +1028,38 @@
 </div>
 
 
+<!-- ⑥ エンドロール -->
+<div class="screen hidden" id="endrollScreen">
+  <div id="endrollFade"></div>
+  <div id="endrollTrack">
+    <div class="er-block er-fin">-- MISSION COMPLETE --</div>
+    <div class="er-block er-title">RK-001 DEFEATED</div>
+    <div class="er-spacer"></div>
+    <div class="er-block er-section">DIRECTOR</div>
+    <div class="er-block er-name">AKN</div>
+    <div class="er-spacer"></div>
+    <div class="er-block er-section">GAME DESIGN</div>
+    <div class="er-block er-name">AKN</div>
+    <div class="er-spacer"></div>
+    <div class="er-block er-section">ART &amp; CHARACTER</div>
+    <div class="er-block er-name">AKN</div>
+    <div class="er-spacer"></div>
+    <div class="er-block er-section">PROGRAMMING</div>
+    <div class="er-block er-name">Claude (Anthropic)</div>
+    <div class="er-spacer"></div>
+    <div class="er-block er-section">MUSIC</div>
+    <div class="er-block er-name">AKN</div>
+    <div class="er-spacer"></div>
+    <div class="er-block er-section">SPECIAL THANKS</div>
+    <div class="er-block er-name">All Players</div>
+    <div class="er-spacer"></div>
+    <div class="er-spacer"></div>
+    <div class="er-block er-fin">THE END</div>
+    <div class="er-spacer"></div>
+    <div class="er-spacer"></div>
+  </div>
+</div>
+
 <audio id="bgm" src="ms.mp3" preload="auto"></audio>
 
 <script>
@@ -1087,10 +1148,22 @@
   const $game       = document.getElementById('gameScreen');
   const $result     = document.getElementById('resultScreen');
   const $story      = document.getElementById('storyScreen');
+  const $endroll    = document.getElementById('endrollScreen');
   const $stageResult= document.getElementById('stageResultScreen');
   function showScreen(el) {
-    [$name, $game, $result, $story, $stageResult].forEach(s => s.classList.add('hidden'));
+    [$name, $game, $result, $story, $stageResult, $endroll].forEach(s => s.classList.add('hidden'));
     el.classList.remove('hidden');
+  }
+
+  function showEndroll(onComplete) {
+    const DURATION = 14000; // スクロール時間(ms)
+    const track = document.getElementById('endrollTrack');
+    track.style.animation = 'none';
+    void track.offsetWidth;
+    track.style.animationDuration = DURATION + 'ms';
+    track.style.animation = `endroll-scroll ${DURATION}ms linear forwards`;
+    showScreen($endroll);
+    setTimeout(onComplete, DURATION + 400);
   }
 
   /* ── BGM ── */
@@ -2235,14 +2308,14 @@ function runCountdown(cb) {
       return;
     }
 
-    // ボスステージクリア → リザルト直行
+    // ボスステージクリア → エンドロール → リザルト
     const cfg5 = STAGE_CONFIGS[currentStageNum - 1];
     if (cfg5 && cfg5.boss) {
       gameEndType = 'win';
       playClear();
       const flash = document.getElementById('clearFlash');
       flash.classList.remove('flashing'); void flash.offsetWidth; flash.classList.add('flashing');
-      setTimeout(() => showResult(), 500);
+      setTimeout(() => showEndroll(() => showResult()), 600);
       return;
     }
 
