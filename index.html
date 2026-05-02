@@ -892,7 +892,7 @@
       position: absolute;
       width: 100%;
       text-align: center;
-      animation: endroll-scroll linear forwards;
+      transform: translateY(100vh);
       z-index: 1;
     }
     @keyframes endroll-scroll {
@@ -1156,15 +1156,26 @@
     el.classList.remove('hidden');
   }
 
+  let endrollTimerId = null;
   function showEndroll(onComplete) {
-    const DURATION = 14000; // スクロール時間(ms)
+    const DURATION = 14000;
     const track = document.getElementById('endrollTrack');
-    track.style.animation = 'none';
+    track.style.transition = 'none';
+    track.style.animation  = 'none';
+    track.style.transform  = 'translateY(100vh)';
     void track.offsetWidth;
-    track.style.animationDuration = DURATION + 'ms';
-    track.style.animation = `endroll-scroll ${DURATION}ms linear forwards`;
+    track.style.animation  = `endroll-scroll ${DURATION}ms linear forwards`;
     showScreen($endroll);
-    setTimeout(onComplete, DURATION + 400);
+    clearTimeout(endrollTimerId);
+    endrollTimerId = setTimeout(() => { endrollTimerId = null; onComplete(); }, DURATION + 400);
+    // タップでスキップ
+    const skip = () => {
+      $endroll.removeEventListener('pointerdown', skip);
+      clearTimeout(endrollTimerId); endrollTimerId = null;
+      track.style.animation = 'none';
+      onComplete();
+    };
+    $endroll.addEventListener('pointerdown', skip, { once: true });
   }
 
   /* ── BGM ── */
