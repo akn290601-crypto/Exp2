@@ -1915,7 +1915,7 @@
           }
           // まだ生き残りがいれば個別に復活
           const W = window.innerWidth;
-          const faceY = cachedHudH + 10;
+          const faceY = cachedHudH + 60;
           if (bossType === 'face') {
             bossFaceRespawnTimer = setTimeout(() => {
               if (!gameOver && bossStageActive) spawnBossEnemy('face', (W - BOSS_FACE_SIZE) / 2, faceY, BOSS_FACE_SIZE, BOSS_FACE_HP);
@@ -1955,14 +1955,14 @@
     const inset = Math.round(W * 0.14);
     const lx = inset;
     const rx = W - BOSS_HAND_SIZE - inset;
-    const y  = cachedHudH + 10 + BOSS_FACE_SIZE - 90;
+    const y  = cachedHudH + 60 + BOSS_FACE_SIZE - 90;
     return { lx, rx, y };
   }
 
   function spawnBossStage5() {
     if (gameOver) return;
     const W    = window.innerWidth;
-    const faceY = cachedHudH + 10;
+    const faceY = cachedHudH + 60;
     spawnBossEnemy('face',   (W - BOSS_FACE_SIZE) / 2, faceY, BOSS_FACE_SIZE, BOSS_FACE_HP);
     const { lx, rx, y } = bossBothHandPos();
     spawnBossEnemy('hand_r', rx, y, BOSS_HAND_SIZE, BOSS_HAND_HP);
