@@ -1657,10 +1657,11 @@
         enemies.splice(i, 1); continue;
       }
       if (e.fixed) {
-        // ボス：水平微振動のみ（固定位置）
+        // ボス：水平微振動 + ゆっくり上下浮遊
         const shakeX = Math.sin(Date.now() / 120) * 3;
+        const floatY = Math.sin(Date.now() / 1600 + (e.x * 0.01)) * 20;
         e.el.style.left = (e.x + shakeX) + 'px';
-        e.el.style.top  = e.y + 'px';
+        e.el.style.top  = (e.y + floatY) + 'px';
         continue;
       }
       e.x += e.vx;
@@ -2033,9 +2034,10 @@
     const img = enemy.el.querySelector('img');
     if (img) img.src = 'IMG_3787.png';
 
+    const floatY = Math.sin(Date.now() / 1600 + (enemy.x * 0.01)) * 20;
     const bx = enemy.x + enemy.size * 0.25;
     const bw = enemy.size * 0.5;
-    const by = enemy.y + enemy.size * 0.82;
+    const by = enemy.y + floatY + enemy.size * 0.82;
     const bh = window.innerHeight - by + 60;
 
     const beam = document.createElement('div');
