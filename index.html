@@ -2432,7 +2432,7 @@ function runCountdown(cb) {
       `<div class="lb-row">
          <span class="lb-medal">🥇</span>
          <span class="lb-name">${best.won ? '全滅クリア' : `${best.score}体撃破`}</span>
-         <span class="lb-score">${best.won ? best.time.toFixed(1)+'秒' : best.score+'/99'}</span>
+         <span class="lb-score">${best.won ? (best.time != null ? best.time.toFixed(1)+'秒' : `${best.score}体`) : best.score+'/99'}</span>
        </div>`;
   }
 
