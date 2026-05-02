@@ -2309,13 +2309,14 @@ function runCountdown(cb) {
     showScreen($game);
     showStageLabel(cfg.label, cfg.subtitle);
     setTimeout(() => playStageUp(), 100);
+    if (cfg.boss) startBGM();
     runCountdown(() => {
       startTime     = Date.now();
       cachedHudH    = $game.querySelector('.game-hud').offsetHeight || 56;
       playerX       = window.innerWidth / 2;
       playerY       = window.innerHeight - 80;
       updateShipPosition();
-      startBGM();
+      if (!cfg.boss) startBGM();
       if (cfg.boss) {
         bossStageActive = true;
         spawnBossStage5();
