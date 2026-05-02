@@ -2008,7 +2008,7 @@
       enemy.shootTimer = setTimeout(() => bossBeamAttack(enemy), 2000 + Math.random() * 1000);
     } else {
       enemy.animTimer  = setTimeout(() => bossHandAnimate(enemy), 800);
-      enemy.shootTimer = setTimeout(() => enemyShoot(enemy), 2500 + Math.random() * 1000);
+      enemy.shootTimer = setTimeout(() => bossHandShoot(enemy), 2500 + Math.random() * 1000);
     }
     return enemy;
   }
@@ -2044,6 +2044,20 @@
         enemy.shootTimer = setTimeout(() => bossBeamAttack(enemy), 2500 + Math.random() * 1500);
       }
     }, 1500);
+  }
+
+  function bossHandShoot(enemy) {
+    if (gameOver || !enemy.el.isConnected || enemy.el.classList.contains('bursting')) return;
+    const ex = enemy.x + enemy.size / 2;
+    const ey = enemy.y + enemy.size / 2;
+    const spd = 2.8;
+    spawnEnemyBullet(ex, ey,  0,    -spd);
+    spawnEnemyBullet(ex, ey,  0,     spd);
+    spawnEnemyBullet(ex, ey, -spd,   0  );
+    spawnEnemyBullet(ex, ey,  spd,   0  );
+    if (!gameOver && enemy.el.isConnected) {
+      enemy.shootTimer = setTimeout(() => bossHandShoot(enemy), 2000 + Math.random() * 1000);
+    }
   }
 
   function bossHandAnimate(enemy) {
