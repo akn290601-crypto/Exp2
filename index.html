@@ -1973,7 +1973,9 @@
     el.appendChild(overlay);
 
     const img = document.createElement('img');
-    img.src = type === 'face' ? 'IMG_3786.png' : 'IMG_3784.png';
+    img.src = type === 'face' ? 'IMG_3786.png'
+            : type === 'hand_l' ? 'IMG_3785.png'
+            : 'IMG_3784.png';
     img.draggable = false;
     el.appendChild(img);
 
@@ -1990,7 +1992,7 @@
     const enemy = {
       el, x, y, vx: 0, vy: 0, size, hp,
       shootTimer: null, animTimer: null,
-      src: type === 'face' ? 'IMG_3786.png' : 'IMG_3784.png',
+      src: type === 'face' ? 'IMG_3786.png' : type === 'hand_l' ? 'IMG_3785.png' : 'IMG_3784.png',
       fixed: true, bossType: type, handPhase: false
     };
     enemies.push(enemy);
