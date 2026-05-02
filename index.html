@@ -1092,6 +1092,7 @@
   let rafId          = null;
   let gameOver       = false;
   let gameWon        = false;
+  let endGameCalled  = false;
   let itemIndex      = 0;
   let totalSpawned   = 0;
   let spawnTimerId   = null;
@@ -1778,8 +1779,20 @@
       for (let ei = enemies.length - 1; ei >= 0; ei--) {
         const e = enemies[ei];
         if (e.el.classList.contains('bursting') || e.el.classList.contains('pre-burst')) continue;
-        if (bx2 > e.x && bx1 < e.x + e.size && by2 > e.y && by1 < e.y + e.size) {
-          const hx = (bx1 + bx2) / 2, hy = (by1 + by2) / 2;
+        // ボスは浮遊オフセット込みの円判定、通常敵は矩形判定
+        let hit = false;
+        let hx = (bx1 + bx2) / 2, hy = (by1 + by2) / 2;
+        if (e.fixed) {
+          const t2 = Date.now(), ph = e.x * 0.008;
+          const ex2 = e.x + Math.sin(t2 / 2200 + ph) * 28 + e.size / 2;
+          const ey2 = e.y + Math.sin(t2 / 1600 + ph) * 18 + e.size / 2;
+          const r = e.size * 0.42;
+          hit = Math.hypot(hx - ex2, hy - ey2) < r;
+          if (hit) { hx = ex2; hy = ey2; }
+        } else {
+          hit = bx2 > e.x && bx1 < e.x + e.size && by2 > e.y && by1 < e.y + e.size;
+        }
+        if (hit) {
           b.el.remove(); bullets.splice(bi, 1);
           createHitSpark(hx, hy);
           flashHitRim();
@@ -1917,7 +1930,7 @@
     } catch (err) {
       console.error('tickTimer error:', err);
     }
-    rafId = requestAnimationFrame(tickTimer);
+    if (!gameOver) rafId = requestAnimationFrame(tickTimer);
   }
   function stopTimer() { cancelAnimationFrame(rafId); rafId = null; }
 
@@ -2234,6 +2247,7 @@ function runCountdown(cb) {
     score          = 0;
     gameOver       = false;
     gameWon        = false;
+    endGameCalled  = false;
     itemIndex      = 0;
     totalSpawned   = 0;
     startTime      = null;
@@ -2305,6 +2319,8 @@ function runCountdown(cb) {
 
   /* ── ゲーム終了 ── */
   function endGame() {
+    if (endGameCalled) return;
+    endGameCalled = true;
     stopTimer();
     clearTimeout(fireTimer);
     fireTimer       = null;
