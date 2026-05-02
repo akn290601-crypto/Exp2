@@ -521,6 +521,39 @@
       z-index: 10;
     }
 
+    @keyframes hologram-appear {
+      0%   { opacity:0;    transform:scale(0.85) scaleY(0.05); filter:brightness(0) hue-rotate(180deg) saturate(5); }
+      8%   { opacity:0.6;  transform:scale(0.9)  scaleY(0.3);  filter:brightness(6) hue-rotate(200deg) saturate(10) blur(2px); }
+      16%  { opacity:0.05; transform:scale(0.93) scaleY(0.55); filter:brightness(4) hue-rotate(180deg) saturate(8); }
+      26%  { opacity:0.75; transform:scale(0.97) scaleY(0.75); filter:brightness(5) hue-rotate(195deg) saturate(10) blur(1px); }
+      36%  { opacity:0.1;  transform:scale(1)    scaleY(0.88); filter:brightness(7) hue-rotate(180deg) saturate(8); }
+      46%  { opacity:0.85; transform:scale(1)    scaleY(1);    filter:brightness(4) hue-rotate(188deg) saturate(6); }
+      55%  { opacity:0.2;  transform:scale(1);                 filter:brightness(5) hue-rotate(180deg) saturate(7); }
+      64%  { opacity:0.9;  transform:scale(1);                 filter:brightness(3) hue-rotate(175deg) saturate(4); }
+      73%  { opacity:0.5;  transform:scale(1);                 filter:brightness(4) hue-rotate(180deg) saturate(3); }
+      83%  { opacity:0.95; transform:scale(1);                 filter:brightness(2) hue-rotate(20deg)  saturate(2); }
+      92%  { opacity:0.85; transform:scale(1);                 filter:brightness(1.3) saturate(1.5); }
+      100% { opacity:1;    transform:scale(1);                 filter:none; }
+    }
+    @keyframes holo-scanline {
+      0%   { transform:translateY(-100%); opacity:0.7; }
+      100% { transform:translateY(300%);  opacity:0; }
+    }
+    .boss-hologram {
+      animation: hologram-appear 4s ease-out forwards;
+      pointer-events: none;
+    }
+    .boss-hologram > img::after,
+    .boss-hologram::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(transparent 30%, rgba(0,220,255,0.3) 50%, transparent 70%);
+      animation: holo-scanline 0.9s linear infinite;
+      pointer-events: none;
+      z-index: 2;
+    }
+
     @keyframes particle-fly {
       0%   { transform: translate(0,0) scale(1); opacity: 1; }
       100% { transform: translate(var(--dx),var(--dy)) scale(0); opacity: 0; }
@@ -2156,10 +2189,26 @@
     if (gameOver) return;
     const W    = window.innerWidth;
     const faceY = cachedHudH + 10;
-    spawnBossEnemy('face',   (W - BOSS_FACE_SIZE) / 2, faceY, BOSS_FACE_SIZE, BOSS_FACE_HP);
+    const HOLO_MS = 4000;
+
+    // 生成してホログラム演出
+    const faceEnemy = spawnBossEnemy('face',   (W - BOSS_FACE_SIZE) / 2, faceY, BOSS_FACE_SIZE, BOSS_FACE_HP);
     const { lx, rx, y } = bossBothHandPos();
-    spawnBossEnemy('hand_r', rx, y, BOSS_HAND_SIZE, BOSS_HAND_HP);
-    spawnBossEnemy('hand_l', lx, y, BOSS_HAND_SIZE, BOSS_HAND_HP);
+    const handR = spawnBossEnemy('hand_r', rx, y, BOSS_HAND_SIZE, BOSS_HAND_HP);
+    const handL = spawnBossEnemy('hand_l', lx, y, BOSS_HAND_SIZE, BOSS_HAND_HP);
+
+    [faceEnemy, handR, handL].forEach(e => { if (e?.el) e.el.classList.add('boss-hologram'); });
+
+    // 出現と同時に画面シェイク
+    [0, 300, 700].forEach(t => setTimeout(() => shakeScreen(), t));
+    navigator.vibrate?.([60, 40, 60, 40, 120]);
+
+    // ホログラム終了後にタップ可能に
+    setTimeout(() => {
+      [faceEnemy, handR, handL].forEach(e => {
+        if (e?.el?.isConnected) e.el.classList.remove('boss-hologram');
+      });
+    }, HOLO_MS);
   }
 
   function spawnBossEnemy(type, x, y, size, hp) {
