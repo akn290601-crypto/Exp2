@@ -1919,24 +1919,34 @@
       setTimeout(() => {
         el.remove();
         if (bossType && bossStageActive && !gameOver) {
-          // 撃破カウントを加算
           if (bossType === 'face')   bossFaceKills++;
           if (bossType === 'hand_r') bossHandRKills++;
           if (bossType === 'hand_l') bossHandLKills++;
-          // クリア条件：頭1回・両手各2回
-          if (bossFaceKills >= 1 && bossHandRKills >= 2 && bossHandLKills >= 2) {
+
+          // 頭を倒したら手も消えてクリア
+          if (bossType === 'face') {
+            clearTimeout(bossHandRRespawnTimer); clearTimeout(bossHandLRespawnTimer);
+            enemies.forEach(e => {
+              if (e.bossType === 'hand_r' || e.bossType === 'hand_l') {
+                clearTimeout(e.shootTimer); clearTimeout(e.animTimer);
+                e.el.classList.add('bursting');
+              }
+            });
             gameOver = true; gameWon = true;
             endGame();
             return;
           }
+
+          // 両手を各2回倒してから頭も倒す通常クリア
+          if (bossHandRKills >= 2 && bossHandLKills >= 2 && bossFaceKills >= 1) {
+            gameOver = true; gameWon = true;
+            endGame();
+            return;
+          }
+
           // 制限未達なら復活
           const W = window.innerWidth;
-          const faceY = cachedHudH + 60;
-          if (bossType === 'face' && bossFaceKills < 1) {
-            bossFaceRespawnTimer = setTimeout(() => {
-              if (!gameOver && bossStageActive) spawnBossEnemy('face', (W - BOSS_FACE_SIZE) / 2, faceY, BOSS_FACE_SIZE, BOSS_FACE_HP);
-            }, 2500);
-          } else if (bossType === 'hand_r' && bossHandRKills < 2) {
+          if (bossType === 'hand_r' && bossHandRKills < 2) {
             bossHandRRespawnTimer = setTimeout(() => {
               if (!gameOver && bossStageActive) { const { rx, y } = bossBothHandPos(); spawnBossEnemy('hand_r', rx, y, BOSS_HAND_SIZE, BOSS_HAND_HP); }
             }, 2500);
