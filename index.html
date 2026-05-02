@@ -1043,10 +1043,10 @@
   let invincibleTimer  = null;
 
   /* ── Stage 5 boss state ── */
-  const BOSS_FACE_SIZE  = 170;
+  const BOSS_FACE_SIZE  = 200;
   const BOSS_HAND_SIZE  = 105;
-  const BOSS_FACE_HP    = 20;
-  const BOSS_HAND_HP    = 30;
+  const BOSS_FACE_HP    = 50;
+  const BOSS_HAND_HP    = 20;
   let bossStageActive        = false;
   let bossFaceRespawnTimer   = null;
   let bossHandRRespawnTimer  = null;
@@ -1906,8 +1906,14 @@
       }
       setTimeout(() => {
         el.remove();
-        // ボスは一定時間後に復活
         if (bossType && bossStageActive && !gameOver) {
+          // 全ボスパーツ撃破 → ステージクリア
+          if (!enemies.some(e => e.bossType)) {
+            gameOver = true; gameWon = true;
+            endGame();
+            return;
+          }
+          // まだ生き残りがいれば個別に復活
           const W = window.innerWidth;
           const faceY = cachedHudH + 10;
           if (bossType === 'face') {
@@ -1945,10 +1951,11 @@
 
   /* ── Stage 5 ボス生成 ── */
   function bossBothHandPos() {
-    const W = window.innerWidth, margin = 12;
-    const lx = margin;
-    const rx = W - BOSS_HAND_SIZE - margin;
-    const y  = cachedHudH + 10 + BOSS_FACE_SIZE - 10;
+    const W = window.innerWidth;
+    const inset = Math.round(W * 0.14);
+    const lx = inset;
+    const rx = W - BOSS_HAND_SIZE - inset;
+    const y  = cachedHudH + 10 + BOSS_FACE_SIZE - 35;
     return { lx, rx, y };
   }
 
