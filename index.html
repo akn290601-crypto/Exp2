@@ -630,6 +630,14 @@
       width: 13px; height: 13px;
       background: radial-gradient(circle, #88eeff 0%, #0099ff 70%, transparent 100%);
     }
+    .ebullet.s4 {
+      width: 13px; height: 13px;
+      background: radial-gradient(circle, #ffee88 0%, #ff8800 70%, transparent 100%);
+    }
+    .ebullet.s5 {
+      width: 15px; height: 15px;
+      background: radial-gradient(circle, #ffffff 0%, #ff44cc 60%, transparent 100%);
+    }
     /* ライフ表示 */
     #hudLives { font-size: 1.1rem; letter-spacing: 2px; }
 
@@ -1048,6 +1056,9 @@
   const BOSS_FACE_HP    = 50;
   const BOSS_HAND_HP    = 20;
   let bossStageActive        = false;
+  let bossFaceAlive          = false;
+  let bossHandRAlive         = false;
+  let bossHandLAlive         = false;
   let bossFaceRespawnTimer   = null;
   let bossHandRRespawnTimer  = null;
   let bossHandLRespawnTimer  = null;
@@ -1907,8 +1918,12 @@
       setTimeout(() => {
         el.remove();
         if (bossType && bossStageActive && !gameOver) {
+          // alive フラグを落とす
+          if (bossType === 'face')   bossFaceAlive  = false;
+          if (bossType === 'hand_r') bossHandRAlive = false;
+          if (bossType === 'hand_l') bossHandLAlive = false;
           // 全ボスパーツ撃破 → ステージクリア
-          if (!enemies.some(e => e.bossType)) {
+          if (!bossFaceAlive && !bossHandRAlive && !bossHandLAlive) {
             gameOver = true; gameWon = true;
             endGame();
             return;
@@ -1952,7 +1967,7 @@
   /* ── Stage 5 ボス生成 ── */
   function bossBothHandPos() {
     const W = window.innerWidth;
-    const inset = Math.round(W * 0.14);
+    const inset = Math.round(W * 0.05);
     const lx = inset;
     const rx = W - BOSS_HAND_SIZE - inset;
     const y  = cachedHudH + 60 + BOSS_FACE_SIZE - 90;
@@ -2005,8 +2020,11 @@
     enemies.push(enemy);
 
     if (type === 'face') {
+      bossFaceAlive  = true;
       enemy.shootTimer = setTimeout(() => bossBeamAttack(enemy), 2000 + Math.random() * 1000);
     } else {
+      if (type === 'hand_r') bossHandRAlive = true;
+      if (type === 'hand_l') bossHandLAlive = true;
       enemy.animTimer  = setTimeout(() => bossHandAnimate(enemy), 800);
       enemy.shootTimer = setTimeout(() => bossHandShoot(enemy), 2500 + Math.random() * 1000);
     }
@@ -2130,6 +2148,7 @@ function runCountdown(cb) {
     cooldownTimer   = null;
     fireTimer = null;
     bossStageActive = false;
+    bossFaceAlive = false; bossHandRAlive = false; bossHandLAlive = false;
     clearTimeout(bossFaceRespawnTimer);
     clearTimeout(bossHandRRespawnTimer); clearTimeout(bossHandLRespawnTimer);
     bullets.forEach(b => b.el.remove()); bullets = [];
@@ -2184,6 +2203,7 @@ function runCountdown(cb) {
     clearTimeout(cooldownTimer);
     cooldownTimer = null;
     bossStageActive = false;
+    bossFaceAlive = false; bossHandRAlive = false; bossHandLAlive = false;
     clearTimeout(bossFaceRespawnTimer);
     clearTimeout(bossHandRRespawnTimer); clearTimeout(bossHandLRespawnTimer);
     bullets.forEach(b => b.el.remove()); bullets = [];
