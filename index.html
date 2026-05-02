@@ -1056,9 +1056,9 @@
   const BOSS_FACE_HP    = 50;
   const BOSS_HAND_HP    = 20;
   let bossStageActive        = false;
-  let bossFaceAlive          = false;
-  let bossHandRAlive         = false;
-  let bossHandLAlive         = false;
+  let bossFaceKills          = 0;   // 1回倒したら終了
+  let bossHandRKills         = 0;   // 2回倒したら終了
+  let bossHandLKills         = 0;   // 2回倒したら終了
   let bossFaceRespawnTimer   = null;
   let bossHandRRespawnTimer  = null;
   let bossHandLRespawnTimer  = null;
@@ -1918,28 +1918,28 @@
       setTimeout(() => {
         el.remove();
         if (bossType && bossStageActive && !gameOver) {
-          // alive フラグを落とす
-          if (bossType === 'face')   bossFaceAlive  = false;
-          if (bossType === 'hand_r') bossHandRAlive = false;
-          if (bossType === 'hand_l') bossHandLAlive = false;
-          // 全ボスパーツ撃破 → ステージクリア
-          if (!bossFaceAlive && !bossHandRAlive && !bossHandLAlive) {
+          // 撃破カウントを加算
+          if (bossType === 'face')   bossFaceKills++;
+          if (bossType === 'hand_r') bossHandRKills++;
+          if (bossType === 'hand_l') bossHandLKills++;
+          // クリア条件：頭1回・両手各2回
+          if (bossFaceKills >= 1 && bossHandRKills >= 2 && bossHandLKills >= 2) {
             gameOver = true; gameWon = true;
             endGame();
             return;
           }
-          // まだ生き残りがいれば個別に復活
+          // 制限未達なら復活
           const W = window.innerWidth;
           const faceY = cachedHudH + 60;
-          if (bossType === 'face') {
+          if (bossType === 'face' && bossFaceKills < 1) {
             bossFaceRespawnTimer = setTimeout(() => {
               if (!gameOver && bossStageActive) spawnBossEnemy('face', (W - BOSS_FACE_SIZE) / 2, faceY, BOSS_FACE_SIZE, BOSS_FACE_HP);
             }, 2500);
-          } else if (bossType === 'hand_r') {
+          } else if (bossType === 'hand_r' && bossHandRKills < 2) {
             bossHandRRespawnTimer = setTimeout(() => {
               if (!gameOver && bossStageActive) { const { rx, y } = bossBothHandPos(); spawnBossEnemy('hand_r', rx, y, BOSS_HAND_SIZE, BOSS_HAND_HP); }
             }, 2500);
-          } else if (bossType === 'hand_l') {
+          } else if (bossType === 'hand_l' && bossHandLKills < 2) {
             bossHandLRespawnTimer = setTimeout(() => {
               if (!gameOver && bossStageActive) { const { lx, y } = bossBothHandPos(); spawnBossEnemy('hand_l', lx, y, BOSS_HAND_SIZE, BOSS_HAND_HP); }
             }, 2500);
@@ -2020,11 +2020,8 @@
     enemies.push(enemy);
 
     if (type === 'face') {
-      bossFaceAlive  = true;
       enemy.shootTimer = setTimeout(() => bossBeamAttack(enemy), 2000 + Math.random() * 1000);
     } else {
-      if (type === 'hand_r') bossHandRAlive = true;
-      if (type === 'hand_l') bossHandLAlive = true;
       enemy.animTimer  = setTimeout(() => bossHandAnimate(enemy), 800);
       enemy.shootTimer = setTimeout(() => bossHandShoot(enemy), 2500 + Math.random() * 1000);
     }
@@ -2148,7 +2145,7 @@ function runCountdown(cb) {
     cooldownTimer   = null;
     fireTimer = null;
     bossStageActive = false;
-    bossFaceAlive = false; bossHandRAlive = false; bossHandLAlive = false;
+    bossFaceKills = 0; bossHandRKills = 0; bossHandLKills = 0;
     clearTimeout(bossFaceRespawnTimer);
     clearTimeout(bossHandRRespawnTimer); clearTimeout(bossHandLRespawnTimer);
     bullets.forEach(b => b.el.remove()); bullets = [];
@@ -2203,7 +2200,7 @@ function runCountdown(cb) {
     clearTimeout(cooldownTimer);
     cooldownTimer = null;
     bossStageActive = false;
-    bossFaceAlive = false; bossHandRAlive = false; bossHandLAlive = false;
+    bossFaceKills = 0; bossHandRKills = 0; bossHandLKills = 0;
     clearTimeout(bossFaceRespawnTimer);
     clearTimeout(bossHandRRespawnTimer); clearTimeout(bossHandLRespawnTimer);
     bullets.forEach(b => b.el.remove()); bullets = [];
