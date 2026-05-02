@@ -1511,6 +1511,7 @@
   }
 
   function loseLife() {
+    if (gameOver) return;
     playerLives--;
     updateLivesHUD();
     navigator.vibrate?.([80, 40, 80]);
@@ -1890,7 +1891,8 @@
         checkCollisions();
         checkPlayerHit();
         if (remaining <= 0 && !gameOver) {
-          gameOver = true; gameWon = true;
+          const isBossStage = STAGE_CONFIGS[currentStageNum - 1]?.boss;
+          gameOver = true; gameWon = isBossStage ? false : true;
           stopSpawn(); stopTimer();
           enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
           enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
@@ -2212,8 +2214,9 @@ function runCountdown(cb) {
     feverMode        = false;
     recentKills      = [];
     if (stageNum === 1) {
-      totalScore = 0; totalElapsed = 0; playerLives = 3; updateLivesHUD();
+      totalScore = 0; totalElapsed = 0;
     }
+    playerLives = 3; updateLivesHUD();
     initShipFromSave();
     gameEndType          = '';
     speedBoostCount      = 0;
