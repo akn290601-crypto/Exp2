@@ -1082,7 +1082,7 @@
     { num: 3, label: 'STAGE 3', subtitle: '俺つらぬく', spawnLimit: 60,
       srcs: ['IMG_3775.png','IMG_3776.png','IMG_3777.png'], vyMin: 0.9, vyMax: 1.5, duration: 28, bg: 'IMG_3783.png' },
     { num: 4, label: 'STAGE 4', subtitle: '漢', spawnLimit: 70,
-      srcs: ['IMG_3775.png','IMG_3756.png','IMG_3777.png'], vyMin: 1.2, vyMax: 2.0, duration: 28, bg: 'IMG_3753.png' },
+      srcs: ['IMG_3775.png','IMG_3756.png','IMG_3777.png'], vyMin: 1.2, vyMax: 2.0, duration: 28, bg: 'IMG_3753.png', spawnRate: 0.72 },
     { num: 5, label: 'STAGE 5', subtitle: 'RK-001', spawnLimit: 999, boss: true,
       srcs: ['IMG_3784.png','IMG_3786.png'], vyMin: 0, vyMax: 0, duration: 60, bg: 'IMG_3753.png' },
   ];
@@ -2077,7 +2077,8 @@
   function getSpawnInterval() {
     let mult = Math.max(0.45, Math.pow(0.88, speedBoostCount));
     if ($game.classList.contains('fever-lv2')) mult *= 0.72;
-    return Math.max(300, Math.round(SPAWN_INTERVAL_MS * mult));
+    const stageMult = STAGE_CONFIGS[currentStageNum - 1]?.spawnRate ?? 1;
+    return Math.max(300, Math.round(SPAWN_INTERVAL_MS * mult * stageMult));
   }
 
   function spawnLoop() {
