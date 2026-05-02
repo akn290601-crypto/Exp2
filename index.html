@@ -2158,10 +2158,20 @@
     const ex = enemy.x + enemy.size / 2;
     const ey = enemy.y + enemy.size / 2;
     const spd = 2.8;
-    spawnEnemyBullet(ex, ey,  0,    -spd);
-    spawnEnemyBullet(ex, ey,  0,     spd);
-    spawnEnemyBullet(ex, ey, -spd,   0  );
-    spawnEnemyBullet(ex, ey,  spd,   0  );
+    const d   = spd * Math.SQRT1_2; // 斜め成分（spd / √2）
+    const is8way = Math.random() < 0.35;
+    // 4way（上下左右）
+    spawnEnemyBullet(ex, ey,  0,   -spd);
+    spawnEnemyBullet(ex, ey,  0,    spd);
+    spawnEnemyBullet(ex, ey, -spd,  0  );
+    spawnEnemyBullet(ex, ey,  spd,  0  );
+    if (is8way) {
+      // 斜め4方向を追加
+      spawnEnemyBullet(ex, ey, -d, -d);
+      spawnEnemyBullet(ex, ey,  d, -d);
+      spawnEnemyBullet(ex, ey, -d,  d);
+      spawnEnemyBullet(ex, ey,  d,  d);
+    }
     if (!gameOver && enemy.el.isConnected) {
       enemy.shootTimer = setTimeout(() => bossHandShoot(enemy), 2000 + Math.random() * 1000);
     }
