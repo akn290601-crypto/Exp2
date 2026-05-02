@@ -1053,8 +1053,8 @@
   /* ── Stage 5 boss state ── */
   const BOSS_FACE_SIZE  = 240;
   const BOSS_HAND_SIZE  = 140;
-  const BOSS_FACE_HP    = 50;
-  const BOSS_HAND_HP    = 20;
+  const BOSS_FACE_HP    = 100;
+  const BOSS_HAND_HP    = 40;
   let bossStageActive        = false;
   let bossFaceKills          = 0;   // 1回倒したら終了
   let bossHandRKills         = 0;   // 2回倒したら終了
@@ -2232,6 +2232,17 @@ function runCountdown(cb) {
     if (!gameWon) {
       gameEndType = 'lose';
       showResult();
+      return;
+    }
+
+    // ボスステージクリア → リザルト直行
+    const cfg5 = STAGE_CONFIGS[currentStageNum - 1];
+    if (cfg5 && cfg5.boss) {
+      gameEndType = 'win';
+      playClear();
+      const flash = document.getElementById('clearFlash');
+      flash.classList.remove('flashing'); void flash.offsetWidth; flash.classList.add('flashing');
+      setTimeout(() => showResult(), 500);
       return;
     }
 
