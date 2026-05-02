@@ -1194,6 +1194,11 @@
   }
   function startBGM() {
     clearInterval(bgmFadeTimer);
+    const src = (currentStageNum === 5) ? 'bgm5.mp3' : 'ms.mp3';
+    if (!bgmAudio.src.endsWith(src)) {
+      bgmAudio.src = src;
+      bgmAudio.load();
+    }
     bgmAudio.loop = true;
     bgmAudio.volume = 0.5;
     bgmAudio.currentTime = 0;
