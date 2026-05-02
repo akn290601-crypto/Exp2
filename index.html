@@ -503,6 +503,24 @@
       z-index: 5;
     }
 
+    @keyframes boss-die {
+      0%   { transform: scale(1)    rotate(0deg);  opacity: 1;   filter: brightness(1); }
+      6%   { transform: scale(1.1)  rotate(-4deg); opacity: 1;   filter: brightness(4) saturate(0); }
+      14%  { transform: scale(0.96) rotate(4deg);  opacity: 1;   filter: brightness(2); }
+      22%  { transform: scale(1.06) rotate(-3deg); opacity: 0.95;filter: brightness(2.5); }
+      32%  { transform: scale(0.92) rotate(3deg);  opacity: 0.9; filter: brightness(1.5); }
+      45%  { transform: scale(1.02) rotate(-2deg); opacity: 0.8; filter: brightness(1.2); }
+      58%  { transform: scale(0.85) rotate(2deg);  opacity: 0.65;filter: brightness(1); }
+      72%  { transform: scale(0.65) rotate(-4deg); opacity: 0.4; filter: brightness(0.7) grayscale(0.5); }
+      86%  { transform: scale(0.35) rotate(5deg);  opacity: 0.2; filter: brightness(0.3) grayscale(1); }
+      100% { transform: scale(0.05) rotate(-6deg); opacity: 0;   filter: brightness(0); }
+    }
+    .boss-dying {
+      animation: boss-die 3s ease-in forwards !important;
+      pointer-events: none !important;
+      z-index: 10;
+    }
+
     @keyframes particle-fly {
       0%   { transform: translate(0,0) scale(1); opacity: 1; }
       100% { transform: translate(var(--dx),var(--dy)) scale(0); opacity: 0; }
@@ -2001,12 +2019,46 @@
     enemy.shootTimer = setTimeout(() => enemyShoot(enemy), shootDelay);
   }
 
+  function startBossDyingSequence(faceEl) {
+    const DYING_MS = 3000;
+    gameOver = true; gameWon = true;
+    bossFaceKills++;
+    clearTimeout(bossHandRRespawnTimer); clearTimeout(bossHandLRespawnTimer);
+    score++;
+    document.getElementById('hudScore').textContent = `💥 ${score}体撃破`;
+    const fx = faceEl.offsetLeft + faceEl.offsetWidth / 2;
+    const fy = faceEl.offsetTop  + faceEl.offsetHeight / 2;
+    showFloatScore(fx, fy, score);
+    faceEl.classList.add('boss-dying');
+    enemies.forEach(e => {
+      if (e.bossType === 'hand_r' || e.bossType === 'hand_l') {
+        clearTimeout(e.shootTimer); clearTimeout(e.animTimer);
+        e.el.classList.add('boss-dying');
+      }
+    });
+    // 連続シェイク
+    [0, 400, 800, 1300, 1900, 2500].forEach(t =>
+      setTimeout(() => { shakeScreen(); navigator.vibrate?.(80); }, t)
+    );
+    setTimeout(() => {
+      if (faceEl.isConnected) faceEl.remove();
+      enemies.forEach(e => { if (e.el.isConnected) e.el.remove(); });
+      enemies = [];
+      endGame();
+    }, DYING_MS);
+  }
+
   function triggerBurst(el) {
     if (gameOver) return;
-    if (el.classList.contains('bursting') || el.classList.contains('pre-burst')) return;
+    if (el.classList.contains('bursting') || el.classList.contains('pre-burst') || el.classList.contains('boss-dying')) return;
     const eObj = enemies.find(e => e.el === el);
     if (eObj) { clearTimeout(eObj.shootTimer); clearTimeout(eObj.animTimer); }
     const bossType = el.dataset.bosstype || null;
+    // ボス顔の最後の撃破 → スロー演出
+    if (bossType === 'face' && bossStageActive && !gameOver) {
+      startBossDyingSequence(el);
+      return;
+    }
     el.classList.add('pre-burst');
     navigator.vibrate?.(50);
     setTimeout(() => {
