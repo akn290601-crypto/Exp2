@@ -1541,6 +1541,13 @@
       gameOver = true; gameWon = false;
       stopSpawn(); stopTimer();
       setTimeout(() => endGame(), 400);
+      // フォールバック：2秒後もゲーム画面なら強制リザルト
+      setTimeout(() => {
+        if (gameOver && !gameWon && $game && !$game.classList.contains('hidden')) {
+          gameEndType = 'lose';
+          try { showResult(); } catch(_) { showScreen($result); }
+        }
+      }, 2000);
     }
   }
 
@@ -2349,7 +2356,7 @@ function runCountdown(cb) {
     // ライフ切れ → ゲームオーバー（即リザルト）
     if (!gameWon) {
       gameEndType = 'lose';
-      showResult();
+      try { showResult(); } catch(e) { console.error('showResult error:', e); showScreen($result); }
       return;
     }
 
