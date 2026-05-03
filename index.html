@@ -1164,7 +1164,7 @@
     <div class="er-spacer"></div>
     <div class="er-spacer"></div>
   </div>
-  <video id="endrollMovie" playsinline
+  <video id="endrollMovie" playsinline preload="auto"
     style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:5;background:#000;"></video>
 </div>
 
@@ -1277,6 +1277,11 @@
     showScreen($endroll);
     stopBGM();
 
+    // ブラウザの自動再生ポリシー解除: ユーザー操作直後にmutedで一瞬再生してunlock
+    movie.src = 'movie2.mp4';
+    movie.muted = true;
+    movie.play().then(() => { movie.pause(); movie.muted = false; movie.currentTime = 0; }).catch(() => {});
+
     let completed = false;
     const finish = () => {
       if (completed) return;
@@ -1287,11 +1292,11 @@
       onComplete();
     };
 
-    // movie2.mp4をBGM終了後に再生
     const playMovie = () => {
       track.style.animation = 'none';
       track.style.display = 'none';
-      movie.src = 'movie2.mp4';
+      movie.currentTime = 0;
+      movie.muted = false;
       movie.style.display = 'block';
       movie.play().catch(() => finish());
       movie.onended = finish;
@@ -1315,7 +1320,6 @@
       clearTimeout(endrollTimerId); endrollTimerId = null;
       track.style.animation = 'none';
       erBgm.pause();
-      // エンドロール中ならmovieへ、movie中ならfinish
       if (movie.style.display === 'none' || movie.style.display === '') {
         playMovie();
       } else {
