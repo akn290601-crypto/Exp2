@@ -789,6 +789,15 @@
       text-shadow: 0 0 20px #00ccff, 0 0 50px #0088ff;
       white-space: nowrap;
     }
+    .stage-label.clear-label .sl-num {
+      font-size: 4.5rem;
+      color: #ffd200;
+      text-shadow: 0 0 30px #ffd200, 0 0 70px #ff8800, 0 0 120px #ff4400;
+    }
+    .stage-label.clear-label .sl-sub {
+      color: #fff;
+      text-shadow: 0 0 15px rgba(255,255,255,0.8);
+    }
     .stage-label .sl-sub {
       display: block;
       font-size: 1.6rem;
@@ -2045,6 +2054,26 @@
         updateRapidBar();
         checkCollisions();
         checkPlayerHit();
+
+        // 全敵全滅クリア判定（ボスステージ以外）
+        if (!gameOver && !STAGE_CONFIGS[currentStageNum - 1]?.boss) {
+          const cfg2 = STAGE_CONFIGS[currentStageNum - 1];
+          if (totalSpawned >= cfg2.spawnLimit && enemies.length === 0) {
+            gameOver = true; gameWon = true;
+            stopSpawn(); stopTimer();
+            enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
+            const el = document.createElement('div');
+            el.className = 'stage-label clear-label';
+            el.innerHTML = '<span class="sl-num">CLEAR！</span><span class="sl-sub">全滅達成</span>';
+            $game.appendChild(el);
+            setTimeout(() => el.remove(), 2000);
+            shakeScreen();
+            playClear();
+            setTimeout(() => endGame(), 1600);
+            return;
+          }
+        }
+
         if (remaining <= 0 && !gameOver) {
           const isBossStage = STAGE_CONFIGS[currentStageNum - 1]?.boss;
           gameOver = true; gameWon = isBossStage ? false : true;
