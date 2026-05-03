@@ -2119,7 +2119,18 @@
           stopSpawn(); stopTimer();
           enemies.forEach(e => { clearTimeout(e.shootTimer); if (e.el.isConnected) e.el.remove(); }); enemies = [];
           enemyBullets.forEach(b => b.el.remove()); enemyBullets = [];
-          setTimeout(() => endGame(), 300);
+          if (!isBossStage) {
+            const el = document.createElement('div');
+            el.className = 'stage-label clear-label';
+            el.innerHTML = '<span class="sl-num">CLEAR！</span><span class="sl-sub">生き残り</span>';
+            $game.appendChild(el);
+            setTimeout(() => el.remove(), 2000);
+            shakeScreen();
+            playClear();
+            setTimeout(() => endGame(), 1600);
+          } else {
+            setTimeout(() => endGame(), 300);
+          }
           return;
         }
       }
