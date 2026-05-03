@@ -1326,7 +1326,7 @@
 
   let endrollTimerId = null;
   function showEndroll(erBgm, onComplete) {
-    const DURATION = 68000;
+    const DURATION = 62000;
     const track = document.getElementById('endrollTrack');
     const movie = document.getElementById('endrollMovie');
     track.style.transition = 'none';
@@ -1361,7 +1361,6 @@
       blackEl.classList.add('show');
       setTimeout(() => {
         blackEl.classList.remove('show');
-        movie.src = 'movie2.mp4';
         movie.currentTime = 0;
         movie.muted = false;
         for (let i = 0; i < movie.textTracks.length; i++) movie.textTracks[i].mode = 'disabled';
@@ -1407,6 +1406,13 @@
       bgmAudio.muted = false;
       bgmAudio.currentTime = 0;
     }).catch(() => { bgmAudio.muted = false; });
+  }
+  function unlockMovie() {
+    const movie = document.getElementById('endrollMovie');
+    movie.src = 'movie2.mp4';
+    movie.muted = true;
+    const p = movie.play();
+    if (p) p.then(() => { movie.pause(); movie.currentTime = 0; }).catch(() => {});
   }
   function startBGM() {
     clearInterval(bgmFadeTimer);
@@ -2929,10 +2935,10 @@ function runCountdown(cb) {
   }
 
   document.getElementById('startBtn').addEventListener('click', () => {
-    initAudio(); unlockBGM();
+    initAudio(); unlockBGM(); unlockMovie();
     showStory(() => startGame());
   });
-  document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); startGame(); });
+  document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); unlockMovie(); startGame(); });
   document.getElementById('debugStartBtn').addEventListener('click', () => {
     initAudio(); unlockBGM();
     const n = parseInt(document.getElementById('debugStageNum').value) || 1;
