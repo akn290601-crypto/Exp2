@@ -1019,23 +1019,8 @@
       inset: 0;
       z-index: 6;
       background: #000;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 16px;
-      cursor: pointer;
     }
-    #endrollBlack.show { display: flex; }
-    #endrollBlack .play-icon {
-      font-size: 4rem;
-      color: rgba(255,255,255,0.85);
-      line-height: 1;
-    }
-    #endrollBlack .play-label {
-      font-size: 1rem;
-      color: rgba(255,255,255,0.5);
-      letter-spacing: 0.2em;
-    }
+    #endrollBlack.show { display: block; }
   </style>
 </head>
 <body>
@@ -1237,10 +1222,7 @@
     <div class="er-spacer"></div>
     <div class="er-spacer"></div>
   </div>
-  <div id="endrollBlack">
-    <div class="play-icon">▶</div>
-    <div class="play-label">タップして再生</div>
-  </div>
+  <div id="endrollBlack"></div>
   <video id="endrollMovie" playsinline preload="auto"
     style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:5;background:#000;"></video>
   <div id="endrollEndText">END</div>
@@ -1344,7 +1326,7 @@
 
   let endrollTimerId = null;
   function showEndroll(erBgm, onComplete) {
-    const DURATION = 62000;
+    const DURATION = 57000;
     const track = document.getElementById('endrollTrack');
     const movie = document.getElementById('endrollMovie');
     track.style.transition = 'none';
@@ -1376,7 +1358,7 @@
     const startMoviePlayback = () => {
       blackEl.classList.remove('show');
       movie.currentTime = 0;
-      movie.muted = false;
+      movie.muted = true;
       for (let i = 0; i < movie.textTracks.length; i++) movie.textTracks[i].mode = 'disabled';
       movie.style.display = 'block';
       movie.play().catch(() => finish());
@@ -1386,9 +1368,8 @@
     const playMovie = () => {
       track.style.animation = 'none';
       track.style.display = 'none';
-      // ユーザーのタップ待ち（iOS自動再生ポリシー対策）
       blackEl.classList.add('show');
-      blackEl.addEventListener('pointerdown', startMoviePlayback, { once: true });
+      setTimeout(() => startMoviePlayback(), 1000);
     };
 
     erBgm.onended = () => {
@@ -1405,7 +1386,6 @@
       clearTimeout(endrollTimerId); endrollTimerId = null;
       track.style.animation = 'none';
       erBgm.pause();
-      blackEl.removeEventListener('pointerdown', startMoviePlayback);
       if (movie.style.display === 'none' || movie.style.display === '') {
         startMoviePlayback();
       } else {
