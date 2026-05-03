@@ -1307,7 +1307,7 @@
 
   let endrollTimerId = null;
   function showEndroll(onComplete) {
-    const DURATION = 71000;
+    const DURATION = 68000;
     const track = document.getElementById('endrollTrack');
     const movie = document.getElementById('endrollMovie');
     track.style.transition = 'none';
@@ -1321,7 +1321,7 @@
     // ブラウザの自動再生ポリシー解除: ユーザー操作直後にmutedで一瞬再生してunlock
     movie.src = 'movie2.mp4';
     movie.muted = true;
-    movie.play().then(() => { movie.pause(); movie.muted = false; movie.currentTime = 0; }).catch(() => {});
+    movie.play().then(() => { movie.pause(); movie.currentTime = 0; }).catch(() => {});
 
     const blackEl = document.getElementById('endrollBlack');
     const endText = document.getElementById('endrollEndText');
