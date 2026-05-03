@@ -1303,7 +1303,7 @@
 
   let endrollTimerId = null;
   function showEndroll(onComplete) {
-    const DURATION = 70000;
+    const DURATION = 71000;
     const track = document.getElementById('endrollTrack');
     const movie = document.getElementById('endrollMovie');
     track.style.transition = 'none';
@@ -1347,6 +1347,8 @@
         blackEl.classList.remove('show');
         movie.currentTime = 0;
         movie.muted = false;
+        // 字幕を無効化
+        for (let i = 0; i < movie.textTracks.length; i++) movie.textTracks[i].mode = 'disabled';
         movie.style.display = 'block';
         movie.play().catch(() => finish());
         movie.onended = finish;
