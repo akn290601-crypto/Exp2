@@ -981,13 +981,13 @@
     .er-label { font-size: 0.75rem; color: #88aacc; letter-spacing: 0.2em; margin-top: 4px; }
     .boss-hp-bar {
       position: absolute;
-      top: -22px;
-      left: 0;
-      width: 100%;
-      height: 12px;
-      background: #222;
-      border: 1.5px solid #555;
-      border-radius: 6px;
+      top: 10px;
+      left: 25%;
+      width: 50%;
+      height: 7px;
+      background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,80,80,0.6);
+      border-radius: 4px;
       overflow: hidden;
       z-index: 3;
     }
@@ -995,7 +995,7 @@
       height: 100%;
       width: 100%;
       background: linear-gradient(90deg, #ff2222, #ff6600);
-      border-radius: 6px;
+      border-radius: 4px;
       transition: width 0.12s ease-out;
     }
     #endrollEndText {
@@ -1223,7 +1223,7 @@
     <div class="er-spacer"></div>
   </div>
   <div id="endrollBlack"></div>
-  <video id="endrollMovie" playsinline preload="auto"
+  <video id="endrollMovie" playsinline muted preload="none"
     style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:5;background:#000;"></video>
   <div id="endrollEndText">END</div>
 </div>
@@ -1328,6 +1328,8 @@
   function showEndroll(erBgm, onComplete) {
     const DURATION = 57000;
     const track = document.getElementById('endrollTrack');
+    const movie = document.getElementById('endrollMovie');
+    const endText = document.getElementById('endrollEndText');
     track.style.transition = 'none';
     track.style.animation  = 'none';
     track.style.transform  = 'translateY(100vh)';
@@ -1336,26 +1338,34 @@
     showScreen($endroll);
     stopBGM();
 
+    let done = false;
+    const finish = () => {
+      if (done) return; done = true;
+      movie.pause(); movie.style.display = 'none';
+      endText.classList.add('show');
+      setTimeout(() => { endText.classList.remove('show'); onComplete(); }, 2000);
+    };
+
     const playMovie = () => {
       track.style.animation = 'none';
+      track.style.display = 'none';
       erBgm.pause();
       clearTimeout(endrollTimerId); endrollTimerId = null;
-      try {
-        localStorage.setItem('pendingResult', JSON.stringify({
-          gameEndType, totalScore, gameWon: true
-        }));
-      } catch(_) {}
-      window.location.href = 'movie.html';
+      // muted HTML属性が付いているので iOSでも必ず再生される
+      movie.src = 'movie2.mp4';
+      movie.style.display = 'block';
+      movie.onended = finish;
+      movie.play().catch(() => finish());
+      movie.addEventListener('pointerdown', finish, { once: true });
     };
 
     erBgm.onended = () => { clearTimeout(endrollTimerId); endrollTimerId = null; playMovie(); };
-
     clearTimeout(endrollTimerId);
     endrollTimerId = setTimeout(() => { endrollTimerId = null; playMovie(); }, DURATION + 400);
 
     const skipEndroll = () => {
       $endroll.removeEventListener('pointerdown', skipEndroll);
-      playMovie();
+      if (movie.style.display === 'block') { finish(); } else { playMovie(); }
     };
     $endroll.addEventListener('pointerdown', skipEndroll, { once: true });
   }
@@ -1372,13 +1382,6 @@
       bgmAudio.muted = false;
       bgmAudio.currentTime = 0;
     }).catch(() => { bgmAudio.muted = false; });
-  }
-  function unlockMovie() {
-    const movie = document.getElementById('endrollMovie');
-    movie.src = 'movie2.mp4';
-    movie.muted = true;
-    const p = movie.play();
-    if (p) p.then(() => { movie.pause(); movie.currentTime = 0; }).catch(() => {});
   }
   function startBGM() {
     clearInterval(bgmFadeTimer);
@@ -2901,10 +2904,10 @@ function runCountdown(cb) {
   }
 
   document.getElementById('startBtn').addEventListener('click', () => {
-    initAudio(); unlockBGM(); unlockMovie();
+    initAudio(); unlockBGM();
     showStory(() => startGame());
   });
-  document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); unlockMovie(); startGame(); });
+  document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); startGame(); });
   document.getElementById('debugStartBtn').addEventListener('click', () => {
     initAudio(); unlockBGM();
     const n = parseInt(document.getElementById('debugStageNum').value) || 1;
