@@ -1328,7 +1328,6 @@
   function showEndroll(erBgm, onComplete) {
     const DURATION = 57000;
     const track = document.getElementById('endrollTrack');
-    const movie = document.getElementById('endrollMovie');
     track.style.transition = 'none';
     track.style.animation  = 'none';
     track.style.transform  = 'translateY(100vh)';
@@ -1337,63 +1336,28 @@
     showScreen($endroll);
     stopBGM();
 
-    const blackEl = document.getElementById('endrollBlack');
-    const endText = document.getElementById('endrollEndText');
-
-    let completed = false;
-    const finish = () => {
-      if (completed) return;
-      completed = true;
-      movie.pause();
-      movie.src = '';
-      movie.style.display = 'none';
-      blackEl.classList.remove('show');
-      endText.classList.add('show');
-      setTimeout(() => {
-        endText.classList.remove('show');
-        onComplete();
-      }, 2000);
-    };
-
-    const startMoviePlayback = () => {
-      blackEl.classList.remove('show');
-      movie.currentTime = 0;
-      movie.muted = true;
-      for (let i = 0; i < movie.textTracks.length; i++) movie.textTracks[i].mode = 'disabled';
-      movie.style.display = 'block';
-      movie.play().catch(() => finish());
-      movie.onended = finish;
-    };
-
     const playMovie = () => {
       track.style.animation = 'none';
-      track.style.display = 'none';
-      blackEl.classList.add('show');
-      setTimeout(() => startMoviePlayback(), 1000);
+      erBgm.pause();
+      clearTimeout(endrollTimerId); endrollTimerId = null;
+      try {
+        localStorage.setItem('pendingResult', JSON.stringify({
+          gameEndType, totalScore, gameWon: true
+        }));
+      } catch(_) {}
+      window.location.href = 'movie.html';
     };
 
-    erBgm.onended = () => {
-      clearTimeout(endrollTimerId);
-      endrollTimerId = null;
-      playMovie();
-    };
+    erBgm.onended = () => { clearTimeout(endrollTimerId); endrollTimerId = null; playMovie(); };
 
     clearTimeout(endrollTimerId);
-    endrollTimerId = setTimeout(() => { endrollTimerId = null; erBgm.pause(); playMovie(); }, DURATION + 400);
+    endrollTimerId = setTimeout(() => { endrollTimerId = null; playMovie(); }, DURATION + 400);
 
     const skipEndroll = () => {
       $endroll.removeEventListener('pointerdown', skipEndroll);
-      clearTimeout(endrollTimerId); endrollTimerId = null;
-      track.style.animation = 'none';
-      erBgm.pause();
-      if (movie.style.display === 'none' || movie.style.display === '') {
-        startMoviePlayback();
-      } else {
-        finish();
-      }
+      playMovie();
     };
     $endroll.addEventListener('pointerdown', skipEndroll, { once: true });
-    movie.addEventListener('pointerdown', finish, { once: true });
   }
 
   /* ── BGM ── */
@@ -2984,6 +2948,24 @@ function runCountdown(cb) {
 
   /* ── 起動時 ── */
   (async () => {
+    // movie.htmlから戻ってきた場合はリザルト画面を表示
+    if (location.search.includes('result=1')) {
+      history.replaceState(null, '', location.pathname);
+      try {
+        const saved = JSON.parse(localStorage.getItem('pendingResult') || 'null');
+        if (saved) {
+          gameEndType = saved.gameEndType;
+          totalScore  = saved.totalScore;
+          gameWon     = saved.gameWon;
+          localStorage.removeItem('pendingResult');
+        }
+      } catch(_) {}
+      renderLb('topLb');
+      renderEndingHistory('topEndingHistory');
+      initShipFromSave();
+      showResult();
+      return;
+    }
     renderLb('topLb');
     renderEndingHistory('topEndingHistory');
     initShipFromSave();
