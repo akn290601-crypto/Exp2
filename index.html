@@ -1223,7 +1223,7 @@
     <div class="er-spacer"></div>
   </div>
   <div id="endrollBlack"></div>
-  <video id="endrollMovie" playsinline muted preload="none"
+  <video id="endrollMovie" playsinline preload="none"
     style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:5;background:#000;"></video>
   <div id="endrollEndText">END</div>
 </div>
@@ -1325,7 +1325,7 @@
   }
 
   let endrollTimerId = null;
-  function showEndroll(erBgm, onComplete) {
+  function showEndroll(onComplete) {
     const DURATION = 57000;
     const track = document.getElementById('endrollTrack');
     const movie = document.getElementById('endrollMovie');
@@ -1336,7 +1336,13 @@
     void track.offsetWidth;
     track.style.animation  = `endroll-scroll ${DURATION}ms linear forwards`;
     showScreen($endroll);
-    stopBGM();
+
+    // bgmAudio（unlockBGM済み）でToki.mp3を再生
+    bgmAudio.loop = false;
+    bgmAudio.volume = 0.7;
+    bgmAudio.src = 'Toki.mp3';
+    bgmAudio.currentTime = 0;
+    bgmAudio.play().catch(() => {});
 
     let done = false;
     const finish = () => {
@@ -1349,17 +1355,18 @@
     const playMovie = () => {
       track.style.animation = 'none';
       track.style.display = 'none';
-      erBgm.pause();
+      bgmAudio.pause();
       clearTimeout(endrollTimerId); endrollTimerId = null;
-      // muted HTML属性が付いているので iOSでも必ず再生される
-      movie.src = 'movie2.mp4';
+      // srcは unlockMovie() で設定済み・再セット不要
+      movie.currentTime = 0;
+      for (let i = 0; i < movie.textTracks.length; i++) movie.textTracks[i].mode = 'disabled';
       movie.style.display = 'block';
       movie.onended = finish;
       movie.play().catch(() => finish());
       movie.addEventListener('pointerdown', finish, { once: true });
     };
 
-    erBgm.onended = () => { clearTimeout(endrollTimerId); endrollTimerId = null; playMovie(); };
+    bgmAudio.onended = () => { clearTimeout(endrollTimerId); endrollTimerId = null; playMovie(); };
     clearTimeout(endrollTimerId);
     endrollTimerId = setTimeout(() => { endrollTimerId = null; playMovie(); }, DURATION + 400);
 
@@ -2480,7 +2487,7 @@
     };
     enemies.push(enemy);
 
-    if (type === 'face') {
+    {
       const hpBar = document.createElement('div');
       hpBar.className = 'boss-hp-bar';
       const hpFill = document.createElement('div');
@@ -2489,6 +2496,8 @@
       el.appendChild(hpBar);
       enemy.hpFillEl = hpFill;
       enemy.hpMax = hp;
+    }
+    if (type === 'face') {
       enemy.shootTimer = setTimeout(() => bossBeamAttack(enemy), 2000 + Math.random() * 1000);
     } else {
       enemy.animTimer  = setTimeout(() => bossHandAnimate(enemy), 800);
@@ -2715,13 +2724,9 @@ function runCountdown(cb) {
     if (cfg5 && cfg5.boss) {
       gameEndType = 'win';
       playClear();
-      // ユーザー操作コンテキスト内でBGMを開始してから渡す
-      const erBgm = new Audio('Toki.mp3');
-      erBgm.volume = 0.7;
-      erBgm.play().catch(() => {});
       const flash = document.getElementById('clearFlash');
       flash.classList.remove('flashing'); void flash.offsetWidth; flash.classList.add('flashing');
-      setTimeout(() => showEndroll(erBgm, () => showResult()), 600);
+      setTimeout(() => showEndroll(() => showResult()), 600);
       return;
     }
 
@@ -2903,11 +2908,18 @@ function runCountdown(cb) {
     };
   }
 
+  function unlockMovie() {
+    const mv = document.getElementById('endrollMovie');
+    if (mv._unlocked) return;
+    mv.src = 'movie2.mp4';
+    const p = mv.play();
+    if (p) p.then(() => { mv.pause(); mv.currentTime = 0; mv._unlocked = true; }).catch(() => {});
+  }
   document.getElementById('startBtn').addEventListener('click', () => {
-    initAudio(); unlockBGM();
+    initAudio(); unlockBGM(); unlockMovie();
     showStory(() => startGame());
   });
-  document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); startGame(); });
+  document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); unlockMovie(); startGame(); });
   document.getElementById('debugStartBtn').addEventListener('click', () => {
     initAudio(); unlockBGM();
     const n = parseInt(document.getElementById('debugStageNum').value) || 1;
