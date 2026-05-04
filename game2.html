@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>チェーンゲーム - トキワ帝国</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; touch-action:none; }
+  html,body { width:100%; height:100%; background:#111; color:#fff;
+    font-family:'Helvetica Neue',Arial,sans-serif; overflow:hidden; }
+
+  #app { display:flex; flex-direction:column; align-items:center; height:100%; padding:8px 4px; }
+
+  #hud {
+    display:flex; justify-content:space-between; align-items:flex-start;
+    width:100%; max-width:380px; padding:4px 8px 8px;
+  }
+  .hud-block { display:flex; flex-direction:column; align-items:center; }
+  .hud-label { font-size:0.7rem; color:#888; letter-spacing:0.1em; }
+  .hud-val   { font-size:1.4rem; font-weight:900; color:#fff; line-height:1.1; }
+
+  #game-area { position:relative; flex:1; display:flex; align-items:center; justify-content:center; }
+
+  #grid-wrap { position:relative; }
+  #grid { display:grid; border:2px solid #2a2a2a; background:#080808; position:relative; }
+
+  .cell { position:relative; display:flex; align-items:center; justify-content:center;
+    border-right:1px solid #1a1a1a; border-bottom:1px solid #1a1a1a; }
+  .cell img { width:88%; height:88%; object-fit:contain; border-radius:4px;
+    image-rendering:pixelated; }
+  .cell.clearing img { animation:burst 0.35s ease forwards; }
+  @keyframes burst {
+    0%   { transform:scale(1);   opacity:1; filter:none; }
+    40%  { transform:scale(1.4); opacity:0.8; filter:brightness(4) saturate(0); }
+    100% { transform:scale(0.1); opacity:0; }
+  }
+
+  #falling-cv { position:absolute; top:0; left:0; pointer-events:none; }
+
+  #chain-disp {
+    position:absolute; top:45%; left:50%; transform:translate(-50%,-50%);
+    font-size:2.4rem; font-weight:900; color:#ffdd00;
+    text-shadow:0 0 24px rgba(255,220,0,0.9), 0 0 48px rgba(255,160,0,0.5);
+    opacity:0; pointer-events:none; z-index:20; white-space:nowrap;
+  }
+  #chain-disp.pop { animation:chain-pop 0.9s ease forwards; }
+  @keyframes chain-pop {
+    0%   { opacity:0; transform:translate(-50%,-50%) scale(0.4); }
+    25%  { opacity:1; transform:translate(-50%,-50%) scale(1.25); }
+    65%  { opacity:1; transform:translate(-50%,-50%) scale(1); }
+    100% { opacity:0; transform:translate(-50%,-50%) scale(0.9); }
+  }
+
+  #controls {
+    display:flex; gap:10px; padding:10px 0 4px; align-items:center; justify-content:center;
+  }
+  .cbtn {
+    width:68px; height:54px; border-radius:14px;
+    background:rgba(255,255,255,0.08); border:1.5px solid rgba(255,255,255,0.18);
+    color:#fff; font-size:1.5rem; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent;
+  }
+  .cbtn:active { background:rgba(255,255,255,0.22); }
+  .cbtn.drop { background:rgba(255,80,80,0.12); border-color:rgba(255,80,80,0.3); }
+
+  /* next piece sidebar */
+  #next-box {
+    position:absolute; right:-52px; top:0;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+  }
+  #next-box .next-label { font-size:0.6rem; color:#666; letter-spacing:0.1em; margin-bottom:4px; }
+
+  /* overlay */
+  #overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.88);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:18px; z-index:100;
+  }
+  #overlay h1 { font-size:2rem; font-weight:900; }
+  #overlay p  { font-size:0.9rem; color:#888; }
+  .obtn {
+    padding:14px 44px; border-radius:30px; border:none;
+    font-size:1.05rem; font-weight:700; cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .obtn.primary { background:#4488ff; color:#fff; }
+  .obtn.back    { background:#333; color:#aaa; }
+
+  #back-fixed {
+    position:fixed; top:10px; left:10px; z-index:200;
+    background:rgba(0,0,0,0.55); border:1px solid #333;
+    color:#aaa; padding:6px 14px; border-radius:20px;
+    font-size:0.82rem; cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+</style>
+</head>
+<body>
+
+<button id="back-fixed" onclick="location.href='index.html'">← 戻る</button>
+
+<div id="app">
+  <div id="hud">
+    <div class="hud-block">
+      <div class="hud-label">SCORE</div>
+      <div class="hud-val" id="scoreVal">0</div>
+    </div>
+    <div class="hud-block">
+      <div class="hud-label">MAX CHAIN</div>
+      <div class="hud-val" id="chainVal">0</div>
+    </div>
+    <div class="hud-block" id="nextBlock">
+      <div class="hud-label">NEXT</div>
+      <div id="nextImgs"></div>
+    </div>
+  </div>
+
+  <div id="game-area">
+    <div id="grid-wrap">
+      <div id="grid"></div>
+      <canvas id="falling-cv"></canvas>
+      <div id="chain-disp"></div>
+    </div>
+  </div>
+
+  <div id="controls">
+    <div class="cbtn" id="btnL">◀</div>
+    <div class="cbtn" id="btnR">▶</div>
+    <div class="cbtn" id="btnRot">↻</div>
+    <div class="cbtn drop" id="btnDrop">▼</div>
+  </div>
+</div>
+
+<div id="overlay">
+  <h1>チェーンゲーム</h1>
+  <p>4つ以上つながると消える！連鎖でスコアUP</p>
+  <button class="obtn primary" id="startBtn">スタート</button>
+  <button class="obtn back" onclick="location.href='index.html'">メインへ戻る</button>
+</div>
+
+<script>
+'use strict';
+
+const COLS = 6, ROWS = 13;
+const TYPES = 3;
+const SRCS = ['IMG_3775.png','IMG_3776.png','IMG_3777.png'];
+const MIN_GROUP = 4;
+const SPAWN_COL = 2;
+// partner offset by rotation: 0=above, 1=right, 2=below, 3=left
+const ROT_OFF = [[-1,0],[0,1],[1,0],[0,-1]];
+
+let CELL = 44;
+let grid, falling, nextQ, score, maxChain;
+let gameRunning = false, resolving = false, fallTimer = null;
+let FALL_MS = 780;
+
+const $grid   = document.getElementById('grid');
+const $cv     = document.getElementById('falling-cv');
+const $cdisp  = document.getElementById('chain-disp');
+const $score  = document.getElementById('scoreVal');
+const $chain  = document.getElementById('chainVal');
+const $nximgs = document.getElementById('nextImgs');
+const $ov     = document.getElementById('overlay');
+
+const preImg = SRCS.map(s => { const i = new Image(); i.src = s; return i; });
+
+/* ── Layout ── */
+function calcCell() {
+  const byW = Math.floor((Math.min(window.innerWidth, 400) - 16) / COLS);
+  const byH = Math.floor((window.innerHeight - 130) / ROWS);
+  CELL = Math.min(byW, byH, 54);
+}
+
+function buildUI() {
+  calcCell();
+  $grid.style.cssText = `display:grid;grid-template-columns:repeat(${COLS},${CELL}px);grid-template-rows:repeat(${ROWS},${CELL}px);border:2px solid #2a2a2a;background:#080808;`;
+  $grid.innerHTML = '';
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const d = document.createElement('div');
+    d.className = 'cell'; d.id = `g${r}_${c}`;
+    d.style.cssText = `width:${CELL}px;height:${CELL}px;`;
+    $grid.appendChild(d);
+  }
+  $cv.width  = COLS * CELL; $cv.height = ROWS * CELL;
+  $cv.style.cssText = `width:${COLS*CELL}px;height:${ROWS*CELL}px;position:absolute;top:0;left:0;pointer-events:none;`;
+}
+
+/* ── Render ── */
+function renderGrid() {
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const d = document.getElementById(`g${r}_${c}`);
+    d.innerHTML = ''; d.classList.remove('clearing');
+    if (grid[r][c] !== null) {
+      const img = document.createElement('img');
+      img.src = SRCS[grid[r][c]]; img.draggable = false;
+      d.appendChild(img);
+    }
+  }
+}
+
+function renderFalling() {
+  const ctx = $cv.getContext('2d');
+  ctx.clearRect(0, 0, $cv.width, $cv.height);
+  if (!falling || !gameRunning) return;
+  const pad = Math.round(CELL * 0.06);
+  [[falling.pr, falling.pc, falling.pt],[falling.ar, falling.ac, falling.at]].forEach(([r,c,t]) => {
+    if (r >= 0 && r < ROWS)
+      ctx.drawImage(preImg[t], c*CELL+pad, r*CELL+pad, CELL-pad*2, CELL-pad*2);
+  });
+}
+
+function renderNext() {
+  $nximgs.innerHTML = '';
+  if (!nextQ) return;
+  [nextQ.at, nextQ.pt].forEach(t => {
+    const img = document.createElement('img');
+    img.src = SRCS[t];
+    img.style.cssText = `width:24px;height:24px;object-fit:contain;display:block;margin:2px auto;image-rendering:pixelated;`;
+    $nximgs.appendChild(img);
+  });
+}
+
+/* ── Game logic ── */
+function rnd() { return Math.floor(Math.random() * TYPES); }
+
+function makePiece() {
+  return { pr: 1, pc: SPAWN_COL, pt: rnd(), ar: 0, ac: SPAWN_COL, at: rnd(), rot: 0 };
+}
+
+function initGame() {
+  grid = Array.from({length:ROWS}, () => Array(COLS).fill(null));
+  score = 0; maxChain = 0; resolving = false;
+  $score.textContent = '0'; $chain.textContent = '0';
+  gameRunning = true;
+  nextQ = makePiece();
+  renderNext();
+  spawn();
+}
+
+function spawn() {
+  clearTimeout(fallTimer);
+  falling = { ...nextQ, pr: 1, pc: SPAWN_COL, ar: 0, ac: SPAWN_COL, rot: 0 };
+  nextQ = makePiece();
+  renderNext();
+  if (!ok(falling.pr, falling.pc, falling.ar, falling.ac)) { gameOver(); return; }
+  renderGrid(); renderFalling();
+  startFall();
+}
+
+function ok(pr, pc, ar, ac) {
+  const v = (r,c) => r>=0&&r<ROWS&&c>=0&&c<COLS&&grid[r][c]===null;
+  return v(pr,pc) && v(ar,ac);
+}
+
+function startFall() {
+  clearTimeout(fallTimer);
+  fallTimer = setTimeout(step, FALL_MS);
+}
+
+function step() {
+  if (!gameRunning || !falling || resolving) return;
+  if (ok(falling.pr+1, falling.pc, falling.ar+1, falling.ac)) {
+    falling.pr++; falling.ar++;
+    renderFalling(); startFall();
+  } else { lock(); }
+}
+
+function lock() {
+  clearTimeout(fallTimer);
+  if (!falling) return;
+  grid[falling.pr][falling.pc] = falling.pt;
+  grid[falling.ar][falling.ac] = falling.at;
+  falling = null; renderFalling();
+  gravity();
+  resolving = true;
+  setTimeout(() => resolve(0), 150);
+}
+
+function gravity() {
+  for (let c = 0; c < COLS; c++) {
+    const col = [];
+    for (let r = 0; r < ROWS; r++) { if (grid[r][c] !== null) col.push(grid[r][c]); }
+    for (let r = ROWS-1; r >= 0; r--) { grid[r][c] = col.length ? col.pop() : null; }
+  }
+  renderGrid();
+}
+
+function resolve(lv) {
+  const groups = findGroups().filter(g => g.length >= MIN_GROUP);
+  if (!groups.length) {
+    resolving = false;
+    if (gameRunning) spawn();
+    return;
+  }
+  const cells = groups.flat();
+  score += cells.length * 10 * (lv + 1);
+  $score.textContent = score;
+  if (lv + 1 > maxChain) { maxChain = lv + 1; $chain.textContent = maxChain; }
+  if (lv > 0) showChain(lv + 1);
+
+  cells.forEach(({r,c}) => {
+    const d = document.getElementById(`g${r}_${c}`); if (d) d.classList.add('clearing');
+  });
+  setTimeout(() => {
+    cells.forEach(({r,c}) => { grid[r][c] = null; });
+    gravity();
+    setTimeout(() => resolve(lv + 1), 220);
+  }, 370);
+}
+
+function findGroups() {
+  const vis = Array.from({length:ROWS}, () => Array(COLS).fill(false));
+  const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+  const groups = [];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    if (grid[r][c] !== null && !vis[r][c]) {
+      const t = grid[r][c], grp = [], q = [{r,c}]; vis[r][c] = true;
+      while (q.length) {
+        const {r:cr,c:cc} = q.shift(); grp.push({r:cr,c:cc});
+        for (const [dr,dc] of dirs) {
+          const nr=cr+dr, nc=cc+dc;
+          if (nr>=0&&nr<ROWS&&nc>=0&&nc<COLS&&!vis[nr][nc]&&grid[nr][nc]===t) {
+            vis[nr][nc]=true; q.push({r:nr,c:nc});
+          }
+        }
+      }
+      groups.push(grp);
+    }
+  }
+  return groups;
+}
+
+function showChain(n) {
+  $cdisp.textContent = `${n} CHAIN!!`;
+  $cdisp.classList.remove('pop'); void $cdisp.offsetWidth; $cdisp.classList.add('pop');
+}
+
+function gameOver() {
+  gameRunning = false; clearTimeout(fallTimer);
+  $ov.innerHTML = `
+    <h1>GAME OVER</h1>
+    <p>スコア</p>
+    <div style="font-size:2.6rem;font-weight:900;color:#ffdd00;">${score}</div>
+    <p>最大チェーン：${maxChain}</p>
+    <button class="obtn primary" id="retryBtn">もう一度</button>
+    <button class="obtn back" id="menuBtn">メインへ戻る</button>
+  `;
+  $ov.style.display = 'flex';
+  document.getElementById('retryBtn').onclick = () => { $ov.style.display='none'; buildUI(); initGame(); };
+  document.getElementById('menuBtn').onclick  = () => { location.href='index.html'; };
+}
+
+/* ── Controls ── */
+function moveL() {
+  if (!falling||!gameRunning||resolving) return;
+  if (ok(falling.pr,falling.pc-1,falling.ar,falling.ac-1)) { falling.pc--; falling.ac--; renderFalling(); }
+}
+function moveR() {
+  if (!falling||!gameRunning||resolving) return;
+  if (ok(falling.pr,falling.pc+1,falling.ar,falling.ac+1)) { falling.pc++; falling.ac++; renderFalling(); }
+}
+function rot() {
+  if (!falling||!gameRunning||resolving) return;
+  const r2 = (falling.rot+1)%4;
+  const [dr,dc] = ROT_OFF[r2];
+  let pr=falling.pr, pc=falling.pc, ar=pr+dr, ac=pc+dc;
+  if (ac<0){ pc++; ac++; } if (ac>=COLS){ pc--; ac--; }
+  if (ar<0){ pr++; ar++; } if (ar>=ROWS){ pr--; ar--; }
+  if (ok(pr,pc,ar,ac)) { falling.pr=pr;falling.pc=pc;falling.ar=ar;falling.ac=ac;falling.rot=r2; renderFalling(); }
+}
+function drop() {
+  if (!falling||!gameRunning||resolving) return;
+  clearTimeout(fallTimer);
+  while (ok(falling.pr+1,falling.pc,falling.ar+1,falling.ac)) { falling.pr++; falling.ar++; }
+  renderFalling(); lock();
+}
+
+// Buttons with repeat on hold
+function addBtn(id, fn) {
+  const el = document.getElementById(id); let iv;
+  el.addEventListener('pointerdown', e => { e.preventDefault(); fn(); iv=setInterval(fn,120); });
+  el.addEventListener('pointerup',    () => clearInterval(iv));
+  el.addEventListener('pointerleave', () => clearInterval(iv));
+}
+addBtn('btnL', moveL); addBtn('btnR', moveR);
+document.getElementById('btnRot').addEventListener('pointerdown',  e => { e.preventDefault(); rot(); });
+document.getElementById('btnDrop').addEventListener('pointerdown', e => { e.preventDefault(); drop(); });
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  ({ArrowLeft:moveL, ArrowRight:moveR, ArrowUp:rot, z:rot, Z:rot, ArrowDown:drop})[e.key]?.();
+});
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  $ov.style.display = 'none'; buildUI(); initGame();
+});
+
+buildUI();
+</script>
+</body>
+</html>
