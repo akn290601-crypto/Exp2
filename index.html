@@ -1228,7 +1228,7 @@
     <div class="er-spacer"></div>
   </div>
   <div id="endrollBlack"></div>
-  <video id="endrollMovie" playsinline preload="none"
+  <video id="endrollMovie" playsinline muted preload="none"
     style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:5;background:#000;"></video>
   <div id="endrollEndText">END</div>
 </div>
@@ -1362,7 +1362,7 @@
       track.style.display = 'none';
       bgmAudio.pause();
       clearTimeout(endrollTimerId); endrollTimerId = null;
-      // srcは unlockMovie() で設定済み・再セット不要
+      movie.src = 'movie2.mp4';
       movie.currentTime = 0;
       for (let i = 0; i < movie.textTracks.length; i++) movie.textTracks[i].mode = 'disabled';
       movie.style.display = 'block';
@@ -2913,18 +2913,11 @@ function runCountdown(cb) {
     };
   }
 
-  function unlockMovie() {
-    const mv = document.getElementById('endrollMovie');
-    if (mv._unlocked) return;
-    mv.src = 'movie2.mp4';
-    const p = mv.play();
-    if (p) p.then(() => { mv.pause(); mv.currentTime = 0; mv._unlocked = true; }).catch(() => {});
-  }
   document.getElementById('startBtn').addEventListener('click', () => {
-    initAudio(); unlockBGM(); unlockMovie();
+    initAudio(); unlockBGM();
     showStory(() => startGame());
   });
-  document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); unlockMovie(); startGame(); });
+  document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); startGame(); });
   document.getElementById('debugStartBtn').addEventListener('click', () => {
     initAudio(); unlockBGM();
     const n = parseInt(document.getElementById('debugStageNum').value) || 1;
@@ -2989,6 +2982,8 @@ function runCountdown(cb) {
     renderLb('topLb');
     renderEndingHistory('topEndingHistory');
     initShipFromSave();
+    // ステージ背景画像を事前ロード
+    STAGE_CONFIGS.forEach(cfg => { if (cfg.bg) { new Image().src = cfg.bg; } });
     heroImgSrcs = (await Promise.all(
       HERO_SRCS.map(src => new Promise(resolve => {
         const img = new Image();
