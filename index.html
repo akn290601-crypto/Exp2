@@ -1208,6 +1208,7 @@
     <div class="er-block er-name">ポコちゃ</div>
     <div class="er-block er-name">ことのちゃん</div>
     <div class="er-block er-name">ひなたちゃん</div>
+    <div class="er-block er-name">野球</div>
     <div class="er-block er-name">前田慶次郎</div>
     <div class="er-block er-name">大事なことは全部漫画に教えてもらった</div>
     <div class="er-block er-name">お世話になってる会社の皆さん</div>
@@ -1357,8 +1358,10 @@
       if (done) return; done = true;
       movie.pause();
       movie.style.display = 'none';
-      endText.classList.add('show');
-      setTimeout(() => { endText.classList.remove('show'); onComplete(); }, 2000);
+      setTimeout(() => {
+        endText.classList.add('show');
+        setTimeout(() => { endText.classList.remove('show'); onComplete(); }, 2000);
+      }, 500);
     };
 
     const playMovie = () => {
