@@ -1235,6 +1235,7 @@
 </div>
 
 <audio id="bgm" src="ms.mp3" preload="auto"></audio>
+<audio id="movieBgm" src="movie2.mp4" preload="auto"></audio>
 
 <script>
   'use strict';
@@ -1332,7 +1333,7 @@
 
   let endrollTimerId = null;
   function showEndroll(onComplete) {
-    const DURATION = 56000;
+    const DURATION = 55000;
     const track = document.getElementById('endrollTrack');
     const movie = document.getElementById('endrollMovie');
     const endText = document.getElementById('endrollEndText');
@@ -1350,22 +1351,11 @@
     bgmAudio.currentTime = 0;
     bgmAudio.play().catch(() => {});
 
-    // エンドロール中にmovie2.mp4の音声をプリデコード（Web Audio API）
-    let movieAudioBuf = null;
-    let movieAudioSrc = null;
-    if (audioCtx) {
-      fetch('movie2.mp4')
-        .then(r => r.arrayBuffer())
-        .then(ab => audioCtx.decodeAudioData(ab))
-        .then(buf => { movieAudioBuf = buf; })
-        .catch(() => {});
-    }
-
     let done = false;
     const finish = () => {
       if (done) return; done = true;
       movie.pause();
-      if (movieAudioSrc) { try { movieAudioSrc.stop(); } catch(_) {} }
+      movieBgmAudio.pause();
       movie.style.display = 'none';
       endText.classList.add('show');
       setTimeout(() => { endText.classList.remove('show'); onComplete(); }, 2000);
@@ -1390,29 +1380,23 @@
       movie.onended = finish;
       movie.addEventListener('pointerdown', finish, { once: true });
 
-      // 音声: playing イベントで映像と同時スタートして音ズレ防止
-      if (movieAudioBuf && audioCtx) {
-        audioCtx.resume().then(() => {
-          let audioStarted = false;
-          const startAudio = () => {
-            if (audioStarted) return; audioStarted = true;
-            movieAudioSrc = audioCtx.createBufferSource();
-            movieAudioSrc.buffer = movieAudioBuf;
-            movieAudioSrc.connect(audioCtx.destination);
-            movieAudioSrc.start(0);
-            movieAudioSrc.onended = finish;
-          };
-          movie.addEventListener('playing', startAudio, { once: true });
-          movie.play().catch(() => {});
-        });
-      } else {
-        movie.play().catch(() => {});
-      }
+      // 音声: アンロック済みの<audio>要素を映像のplayingイベントで同期スタート
+      movieBgmAudio.currentTime = 0;
+      movieBgmAudio.volume = 1.0;
+      movieBgmAudio.onended = finish;
+      let audioStarted = false;
+      const startAudio = () => {
+        if (audioStarted) return; audioStarted = true;
+        movieBgmAudio.play().catch(() => {});
+      };
+      movie.addEventListener('playing', startAudio, { once: true });
+      movie.play().catch(() => {});
     };
 
-    bgmAudio.onended = () => { clearTimeout(endrollTimerId); endrollTimerId = null; playMovie(); };
+    // 音楽終了後1秒待ってからムービー開始
+    bgmAudio.onended = () => { clearTimeout(endrollTimerId); endrollTimerId = null; setTimeout(playMovie, 1000); };
     clearTimeout(endrollTimerId);
-    endrollTimerId = setTimeout(() => { endrollTimerId = null; playMovie(); }, DURATION + 400);
+    endrollTimerId = setTimeout(() => { endrollTimerId = null; playMovie(); }, DURATION + 1400);
 
     const skipEndroll = () => {
       $endroll.removeEventListener('pointerdown', skipEndroll);
@@ -1426,6 +1410,8 @@
   bgmAudio.volume = 0.5;
   let bgmFadeTimer = null;
 
+  const movieBgmAudio = document.getElementById('movieBgm');
+
   function unlockBGM() {
     bgmAudio.muted = true;
     bgmAudio.play().then(() => {
@@ -1433,6 +1419,12 @@
       bgmAudio.muted = false;
       bgmAudio.currentTime = 0;
     }).catch(() => { bgmAudio.muted = false; });
+    movieBgmAudio.muted = true;
+    movieBgmAudio.play().then(() => {
+      movieBgmAudio.pause();
+      movieBgmAudio.muted = false;
+      movieBgmAudio.currentTime = 0;
+    }).catch(() => { movieBgmAudio.muted = false; });
   }
   function startBGM() {
     clearInterval(bgmFadeTimer);

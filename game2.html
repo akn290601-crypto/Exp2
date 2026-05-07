@@ -395,6 +395,14 @@ document.getElementById('startBtn').addEventListener('click', () => {
 });
 
 buildUI();
+
+// ダブルタップズーム防止
+let _lastTap = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - _lastTap < 300) e.preventDefault();
+  _lastTap = now;
+}, { passive: false });
 </script>
 </body>
 </html>
