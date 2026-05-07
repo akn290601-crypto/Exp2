@@ -1332,7 +1332,7 @@
 
   let endrollTimerId = null;
   function showEndroll(onComplete) {
-    const DURATION = 55000;
+    const DURATION = 54000;
     const track = document.getElementById('endrollTrack');
     const movie = document.getElementById('endrollMovie');
     const endText = document.getElementById('endrollEndText');
@@ -1382,7 +1382,7 @@
     };
 
     // 音楽終了後0.5秒待ってからムービー開始
-    bgmAudio.onended = () => { clearTimeout(endrollTimerId); endrollTimerId = null; setTimeout(playMovie, 500); };
+    bgmAudio.onended = () => { clearTimeout(endrollTimerId); endrollTimerId = null; playMovie(); };
     clearTimeout(endrollTimerId);
     endrollTimerId = setTimeout(() => { endrollTimerId = null; playMovie(); }, DURATION + 900);
 
