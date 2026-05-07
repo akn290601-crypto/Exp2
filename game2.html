@@ -2,12 +2,13 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>チェーンゲーム - トキワ帝国</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; touch-action:none; }
+  * { margin:0; padding:0; box-sizing:border-box; touch-action:manipulation; }
   html,body { width:100%; height:100%; background:#111; color:#fff;
-    font-family:'Helvetica Neue',Arial,sans-serif; overflow:hidden; }
+    font-family:'Helvetica Neue',Arial,sans-serif; overflow:hidden;
+    touch-action:manipulation; }
 
   #app { display:flex; flex-direction:column; align-items:center; height:100%; padding:4px 4px 0; }
 
@@ -396,13 +397,15 @@ document.getElementById('startBtn').addEventListener('click', () => {
 
 buildUI();
 
-// ダブルタップズーム防止
+// ダブルタップズーム防止（iOSはtouchstartで発火するため両方で防止）
 let _lastTap = 0;
-document.addEventListener('touchend', e => {
+const _preventDoubleTap = e => {
   const now = Date.now();
-  if (now - _lastTap < 300) e.preventDefault();
+  if (now - _lastTap < 350) e.preventDefault();
   _lastTap = now;
-}, { passive: false });
+};
+document.addEventListener('touchstart', _preventDoubleTap, { passive: false });
+document.addEventListener('touchend',   _preventDoubleTap, { passive: false });
 </script>
 </body>
 </html>
