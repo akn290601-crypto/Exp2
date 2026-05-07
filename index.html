@@ -1229,13 +1229,12 @@
     <div class="er-spacer"></div>
   </div>
   <div id="endrollBlack"></div>
-  <video id="endrollMovie" playsinline muted preload="none"
+  <video id="endrollMovie" playsinline preload="none"
     style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:5;background:#000;"></video>
   <div id="endrollEndText">END</div>
 </div>
 
 <audio id="bgm" src="ms.mp3" preload="auto"></audio>
-<audio id="movieBgm" src="movie2.mp4" preload="auto"></audio>
 
 <script>
   'use strict';
@@ -1355,7 +1354,6 @@
     const finish = () => {
       if (done) return; done = true;
       movie.pause();
-      movieBgmAudio.pause();
       movie.style.display = 'none';
       endText.classList.add('show');
       setTimeout(() => { endText.classList.remove('show'); onComplete(); }, 2000);
@@ -1367,10 +1365,9 @@
       bgmAudio.pause();
       clearTimeout(endrollTimerId); endrollTimerId = null;
 
-      // 映像: muted で確実再生、字幕は常に無効
-      movie.src = 'movie2.mp4';
-      movie.muted = true;
+      // アンロック済みの video 要素をそのまま再生 → 映像と音声が同一タイムラインで完全同期
       movie.currentTime = 0;
+      movie.muted = false;
       const disableTracks = () => {
         for (let i = 0; i < movie.textTracks.length; i++) movie.textTracks[i].mode = 'disabled';
       };
@@ -1379,24 +1376,13 @@
       movie.style.display = 'block';
       movie.onended = finish;
       movie.addEventListener('pointerdown', finish, { once: true });
-
-      // 音声: アンロック済みの<audio>要素を映像のplayingイベントで同期スタート
-      movieBgmAudio.currentTime = 0;
-      movieBgmAudio.volume = 1.0;
-      movieBgmAudio.onended = finish;
-      let audioStarted = false;
-      const startAudio = () => {
-        if (audioStarted) return; audioStarted = true;
-        movieBgmAudio.play().catch(() => {});
-      };
-      movie.addEventListener('playing', startAudio, { once: true });
       movie.play().catch(() => {});
     };
 
-    // 音楽終了後1秒待ってからムービー開始
-    bgmAudio.onended = () => { clearTimeout(endrollTimerId); endrollTimerId = null; setTimeout(playMovie, 1000); };
+    // 音楽終了後0.5秒待ってからムービー開始
+    bgmAudio.onended = () => { clearTimeout(endrollTimerId); endrollTimerId = null; setTimeout(playMovie, 500); };
     clearTimeout(endrollTimerId);
-    endrollTimerId = setTimeout(() => { endrollTimerId = null; playMovie(); }, DURATION + 1400);
+    endrollTimerId = setTimeout(() => { endrollTimerId = null; playMovie(); }, DURATION + 900);
 
     const skipEndroll = () => {
       $endroll.removeEventListener('pointerdown', skipEndroll);
@@ -1410,8 +1396,6 @@
   bgmAudio.volume = 0.5;
   let bgmFadeTimer = null;
 
-  const movieBgmAudio = document.getElementById('movieBgm');
-
   function unlockBGM() {
     bgmAudio.muted = true;
     bgmAudio.play().then(() => {
@@ -1419,12 +1403,11 @@
       bgmAudio.muted = false;
       bgmAudio.currentTime = 0;
     }).catch(() => { bgmAudio.muted = false; });
-    movieBgmAudio.muted = true;
-    movieBgmAudio.play().then(() => {
-      movieBgmAudio.pause();
-      movieBgmAudio.muted = false;
-      movieBgmAudio.currentTime = 0;
-    }).catch(() => { movieBgmAudio.muted = false; });
+    // ゲーム開始時にユーザー操作中でmovie要素もアンロック → 後でplay()が音声込みで動く
+    const movieEl = document.getElementById('endrollMovie');
+    movieEl.src = 'movie2.mp4';
+    movieEl.muted = false;
+    movieEl.play().then(() => { movieEl.pause(); movieEl.currentTime = 0; }).catch(() => {});
   }
   function startBGM() {
     clearInterval(bgmFadeTimer);
