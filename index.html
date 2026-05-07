@@ -1228,7 +1228,7 @@
     <div class="er-spacer"></div>
   </div>
   <div id="endrollBlack"></div>
-  <video id="endrollMovie" playsinline preload="none"
+  <video id="endrollMovie" playsinline muted preload="none"
     style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:5;background:#000;"></video>
   <div id="endrollEndText">END</div>
 </div>
@@ -1352,7 +1352,9 @@
     let done = false;
     const finish = () => {
       if (done) return; done = true;
-      movie.pause(); movie.style.display = 'none';
+      movie.pause();
+      bgmAudio.pause();
+      movie.style.display = 'none';
       endText.classList.add('show');
       setTimeout(() => { endText.classList.remove('show'); onComplete(); }, 2000);
     };
@@ -1360,15 +1362,24 @@
     const playMovie = () => {
       track.style.animation = 'none';
       track.style.display = 'none';
-      bgmAudio.pause();
       clearTimeout(endrollTimerId); endrollTimerId = null;
-      // srcはunlockMovie()で設定済み。再セットするとiOSのunlock状態がリセットされる
-      movie.volume = 1;
+
+      // 映像: muted で確実再生
+      movie.src = 'movie2.mp4';
+      movie.muted = true;
       movie.currentTime = 0;
       for (let i = 0; i < movie.textTracks.length; i++) movie.textTracks[i].mode = 'disabled';
       movie.style.display = 'block';
-      movie.onended = finish;
-      movie.play().catch(() => finish());
+      movie.play().catch(() => {});
+
+      // 音声: bgmAudio（unlockBGM済み）で同じファイルを再生
+      bgmAudio.src = 'movie2.mp4';
+      bgmAudio.loop = false;
+      bgmAudio.volume = 1;
+      bgmAudio.currentTime = 0;
+      bgmAudio.onended = finish;
+      bgmAudio.play().catch(() => finish());
+
       movie.addEventListener('pointerdown', finish, { once: true });
     };
 
@@ -2914,20 +2925,11 @@ function runCountdown(cb) {
     };
   }
 
-  function unlockMovie() {
-    const mv = document.getElementById('endrollMovie');
-    if (mv._unlocked) return;
-    mv.src = 'movie2.mp4';
-    mv.volume = 0; // 無音（muted属性なし）でiOSの音声再生ロックを解除
-    const p = mv.play();
-    if (p) p.then(() => { mv.pause(); mv.currentTime = 0; mv.volume = 1; mv._unlocked = true; }).catch(() => {});
-  }
-
   document.getElementById('startBtn').addEventListener('click', () => {
-    initAudio(); unlockBGM(); unlockMovie();
+    initAudio(); unlockBGM();
     showStory(() => startGame());
   });
-  document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); unlockMovie(); startGame(); });
+  document.getElementById('retryBtn').addEventListener('click', () => { initAudio(); unlockBGM(); startGame(); });
   document.getElementById('debugStartBtn').addEventListener('click', () => {
     initAudio(); unlockBGM();
     const n = parseInt(document.getElementById('debugStageNum').value) || 1;
