@@ -1342,18 +1342,29 @@
     track.style.animation  = `endroll-scroll ${DURATION}ms linear forwards`;
     showScreen($endroll);
 
-    // bgmAudio（unlockBGM済み）でToki.mp3を再生
+    // bgmAudioでToki.mp3を再生
     bgmAudio.loop = false;
     bgmAudio.volume = 0.7;
     bgmAudio.src = 'Toki.mp3';
     bgmAudio.currentTime = 0;
     bgmAudio.play().catch(() => {});
 
+    // エンドロール中にmovie2.mp4の音声をプリデコード（Web Audio API）
+    let movieAudioBuf = null;
+    let movieAudioSrc = null;
+    if (audioCtx) {
+      fetch('movie2.mp4')
+        .then(r => r.arrayBuffer())
+        .then(ab => audioCtx.decodeAudioData(ab))
+        .then(buf => { movieAudioBuf = buf; })
+        .catch(() => {});
+    }
+
     let done = false;
     const finish = () => {
       if (done) return; done = true;
       movie.pause();
-      bgmAudio.pause();
+      if (movieAudioSrc) { try { movieAudioSrc.stop(); } catch(_) {} }
       movie.style.display = 'none';
       endText.classList.add('show');
       setTimeout(() => { endText.classList.remove('show'); onComplete(); }, 2000);
@@ -1362,6 +1373,7 @@
     const playMovie = () => {
       track.style.animation = 'none';
       track.style.display = 'none';
+      bgmAudio.pause();
       clearTimeout(endrollTimerId); endrollTimerId = null;
 
       // 映像: muted で確実再生
@@ -1371,14 +1383,18 @@
       for (let i = 0; i < movie.textTracks.length; i++) movie.textTracks[i].mode = 'disabled';
       movie.style.display = 'block';
       movie.play().catch(() => {});
+      movie.onended = finish;
 
-      // 音声: bgmAudio（unlockBGM済み）で同じファイルを再生
-      bgmAudio.src = 'movie2.mp4';
-      bgmAudio.loop = false;
-      bgmAudio.volume = 1;
-      bgmAudio.currentTime = 0;
-      bgmAudio.onended = finish;
-      bgmAudio.play().catch(() => finish());
+      // 音声: Web Audio API（ゲーム中にアンロック済み）でデコード済みバッファを再生
+      if (movieAudioBuf && audioCtx) {
+        audioCtx.resume().then(() => {
+          movieAudioSrc = audioCtx.createBufferSource();
+          movieAudioSrc.buffer = movieAudioBuf;
+          movieAudioSrc.connect(audioCtx.destination);
+          movieAudioSrc.start(0);
+          movieAudioSrc.onended = finish;
+        });
+      }
 
       movie.addEventListener('pointerdown', finish, { once: true });
     };
