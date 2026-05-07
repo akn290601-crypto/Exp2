@@ -1343,10 +1343,12 @@
     track.style.animation  = `endroll-scroll ${DURATION}ms linear forwards`;
     showScreen($endroll);
 
-    // bgmAudioでToki.mp3を再生
+    // bgmAudioでToki.mp3を再生（muted=falseでunlock .then()の干渉を防ぐ）
+    bgmAudio.muted = false;
     bgmAudio.loop = false;
     bgmAudio.volume = 0.7;
     bgmAudio.src = 'Toki.mp3';
+    bgmAudio.load();
     bgmAudio.currentTime = 0;
     bgmAudio.play().catch(() => {});
 
@@ -1399,14 +1401,16 @@
   function unlockBGM() {
     bgmAudio.muted = true;
     bgmAudio.play().then(() => {
-      bgmAudio.pause();
-      bgmAudio.muted = false;
-      bgmAudio.currentTime = 0;
+      if (bgmAudio.muted) { // まだ unlock 状態なら pause してリセット（showEndroll が先に使っていたら skip）
+        bgmAudio.pause();
+        bgmAudio.muted = false;
+        bgmAudio.currentTime = 0;
+      }
     }).catch(() => { bgmAudio.muted = false; });
-    // ゲーム開始時にユーザー操作中でmovie要素もアンロック → 後でplay()が音声込みで動く
+    // movieEl を muted でアンロック（iOS に play 許可を記憶させる・audio session 競合を避ける）
     const movieEl = document.getElementById('endrollMovie');
     movieEl.src = 'movie2.mp4';
-    movieEl.muted = false;
+    movieEl.muted = true;
     movieEl.play().then(() => { movieEl.pause(); movieEl.currentTime = 0; }).catch(() => {});
   }
   function startBGM() {
