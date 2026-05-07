@@ -1332,7 +1332,7 @@
 
   let endrollTimerId = null;
   function showEndroll(onComplete) {
-    const DURATION = 57000;
+    const DURATION = 56000;
     const track = document.getElementById('endrollTrack');
     const movie = document.getElementById('endrollMovie');
     const endText = document.getElementById('endrollEndText');
@@ -1377,27 +1377,37 @@
       bgmAudio.pause();
       clearTimeout(endrollTimerId); endrollTimerId = null;
 
-      // 映像: muted で確実再生
+      // 映像: muted で確実再生、字幕は常に無効
       movie.src = 'movie2.mp4';
       movie.muted = true;
       movie.currentTime = 0;
-      for (let i = 0; i < movie.textTracks.length; i++) movie.textTracks[i].mode = 'disabled';
+      const disableTracks = () => {
+        for (let i = 0; i < movie.textTracks.length; i++) movie.textTracks[i].mode = 'disabled';
+      };
+      disableTracks();
+      movie.addEventListener('loadedmetadata', disableTracks, { once: true });
       movie.style.display = 'block';
-      movie.play().catch(() => {});
       movie.onended = finish;
+      movie.addEventListener('pointerdown', finish, { once: true });
 
-      // 音声: Web Audio API（ゲーム中にアンロック済み）でデコード済みバッファを再生
+      // 音声: playing イベントで映像と同時スタートして音ズレ防止
       if (movieAudioBuf && audioCtx) {
         audioCtx.resume().then(() => {
-          movieAudioSrc = audioCtx.createBufferSource();
-          movieAudioSrc.buffer = movieAudioBuf;
-          movieAudioSrc.connect(audioCtx.destination);
-          movieAudioSrc.start(0);
-          movieAudioSrc.onended = finish;
+          let audioStarted = false;
+          const startAudio = () => {
+            if (audioStarted) return; audioStarted = true;
+            movieAudioSrc = audioCtx.createBufferSource();
+            movieAudioSrc.buffer = movieAudioBuf;
+            movieAudioSrc.connect(audioCtx.destination);
+            movieAudioSrc.start(0);
+            movieAudioSrc.onended = finish;
+          };
+          movie.addEventListener('playing', startAudio, { once: true });
+          movie.play().catch(() => {});
         });
+      } else {
+        movie.play().catch(() => {});
       }
-
-      movie.addEventListener('pointerdown', finish, { once: true });
     };
 
     bgmAudio.onended = () => { clearTimeout(endrollTimerId); endrollTimerId = null; playMovie(); };
