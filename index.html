@@ -1344,6 +1344,10 @@
     track.style.animation  = `endroll-scroll ${DURATION}ms linear forwards`;
     showScreen($endroll);
 
+    // スクリーンオフ防止（iOS 16.4+ Safari対応）
+    let wakeLock = null;
+    navigator.wakeLock?.request('screen').then(wl => { wakeLock = wl; }).catch(() => {});
+
     // bgmAudioでToki.mp3を再生（muted=falseでunlock .then()の干渉を防ぐ）
     bgmAudio.muted = false;
     bgmAudio.loop = false;
@@ -1358,6 +1362,7 @@
       if (done) return; done = true;
       movie.pause();
       movie.style.display = 'none';
+      wakeLock?.release().catch(() => {}); wakeLock = null;
       setTimeout(() => {
         endText.classList.add('show');
         setTimeout(() => { endText.classList.remove('show'); onComplete(); }, 2000);
