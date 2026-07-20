@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RPG テスト - トキワ帝国</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; touch-action:manipulation; }
+html,body {
+  width:100%; height:100%;
+  background:#1a1220;
+  color:#fff;
+  font-family:'Helvetica Neue',Arial,sans-serif;
+  overflow:hidden;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:10px;
+  padding:8px;
+}
+
+#mapWrap {
+  position:relative;
+  border:2px solid #554466;
+  box-shadow:0 0 20px rgba(180,100,255,0.3);
+  flex-shrink:0;
+}
+
+/* D-pad */
+#dpad {
+  display:grid;
+  grid-template-columns:repeat(3,52px);
+  grid-template-rows:repeat(3,52px);
+  gap:4px;
+  flex-shrink:0;
+}
+.db {
+  background:rgba(255,255,255,0.12);
+  border:1px solid rgba(255,255,255,0.25);
+  border-radius:10px;
+  font-size:1.5rem;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  user-select:none; -webkit-user-select:none;
+  transition:background 0.08s;
+}
+.db:active, .db.pressed { background:rgba(255,255,255,0.35); }
+.dg { visibility:hidden; }
+
+/* Message */
+#msgBox {
+  width:100%; max-width:420px;
+  background:rgba(0,0,0,0.75);
+  border:1px solid #887799;
+  border-radius:10px;
+  padding:10px 14px;
+  font-size:0.95rem;
+  line-height:1.6;
+  min-height:52px;
+  text-align:center;
+  white-space:pre-line;
+  flex-shrink:0;
+}
+
+/* Back button */
+#backBtn {
+  position:fixed; top:10px; left:10px;
+  background:rgba(0,0,0,0.7);
+  border:1px solid #665577;
+  border-radius:8px;
+  color:#ccc; font-size:0.8rem;
+  padding:6px 12px; cursor:pointer;
+  z-index:100;
+}
+</style>
+</head>
+<body>
+<button id="backBtn" onclick="window.location.href='index.html'">← もどる</button>
+
+<div id="mapWrap"></div>
+<div id="msgBox">↑↓←→ で移動　NPCに近づいて話しかけよう</div>
+
+<div id="dpad">
+  <div class="dg"></div>
+  <div class="db" id="bU">↑</div>
+  <div class="dg"></div>
+  <div class="db" id="bL">←</div>
+  <div class="dg"></div>
+  <div class="db" id="bR">→</div>
+  <div class="dg"></div>
+  <div class="db" id="bD">↓</div>
+  <div class="dg"></div>
+</div>
+
+<script>
+'use strict';
+
+// ─── マップ定義 ───────────────────────────────
+// 0=床  1=壁  2=NPC(A)  3=NPC(B)  4=宝箱  5=出口
+const COLS = 13, ROWS = 9;
+const BASE_MAP = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,1,1,1,0,0,0,0,0,0,1],
+  [1,0,0,1,0,0,0,2,0,0,0,0,1],
+  [1,0,0,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,4,0,0,1],
+  [1,0,3,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,5,1,1,1,1,1,1],
+];
+
+// NPC・宝箱データ
+const NPCS = [
+  { col:7, row:3, emoji:'🧙', name:'老人',
+    lines:['ここはトキワの世界の\n中継地点じゃ。', 'ステージをクリアして\nボスを倒せ！'] },
+  { col:2, row:6, emoji:'🧒', name:'子ども',
+    lines:['宝箱には便利なアイテムが\n入っているよ！', '奥の扉から先の\nステージに進めるんだ。'] },
+];
+const CHESTS = [
+  { col:9, row:5, opened:false, msg:'💥 弾速アップをゲット！\n次のステージで使えるぞ！' },
+];
+
+let npcTalkIdx = NPCS.map(() => 0);
+let playerCol = 6, playerRow = 4;
+let CELL = 44;
+let msgTimer = null;
+
+const $wrap = document.getElementById('mapWrap');
+const $msg  = document.getElementById('msgBox');
+
+// ─── タイル描画 ───────────────────────────────
+const TILE_STYLE = {
+  0: 'background:#2a2035;',
+  1: 'background:#443355;',
+  5: 'background:#1a4422;',
+};
+
+function calcCell() {
+  const maxW = Math.min(window.innerWidth - 16, 520);
+  const maxH = Math.min(window.innerHeight - 180, 400);
+  CELL = Math.max(30, Math.floor(Math.min(maxW / COLS, maxH / ROWS)));
+}
+
+function buildMap() {
+  calcCell();
+  $wrap.style.width  = (CELL * COLS) + 'px';
+  $wrap.style.height = (CELL * ROWS) + 'px';
+  $wrap.innerHTML = '';
+
+  // タイル
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const v = BASE_MAP[r][c];
+      const el = document.createElement('div');
+      el.style.cssText = `position:absolute;left:${c*CELL}px;top:${r*CELL}px;width:${CELL}px;height:${CELL}px;
+        display:flex;align-items:center;justify-content:center;
+        font-size:${CELL*0.55}px;
+        ${TILE_STYLE[v] || TILE_STYLE[0]}`;
+      if (v === 1) el.textContent = '';
+      if (v === 5) el.textContent = '🚪';
+      $wrap.appendChild(el);
+    }
+  }
+
+  // NPC
+  NPCS.forEach((n, i) => {
+    const el = document.createElement('div');
+    el.id = 'npc' + i;
+    el.style.cssText = `position:absolute;left:${n.col*CELL}px;top:${n.row*CELL}px;
+      width:${CELL}px;height:${CELL}px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:${CELL*0.7}px;z-index:5;cursor:pointer;`;
+    el.textContent = n.emoji;
+    $wrap.appendChild(el);
+  });
+
+  // 宝箱
+  CHESTS.forEach((ch, i) => {
+    const el = document.createElement('div');
+    el.id = 'chest' + i;
+    el.style.cssText = `position:absolute;left:${ch.col*CELL}px;top:${ch.row*CELL}px;
+      width:${CELL}px;height:${CELL}px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:${CELL*0.65}px;z-index:5;`;
+    el.textContent = ch.opened ? '📭' : '📦';
+    $wrap.appendChild(el);
+  });
+
+  // プレイヤー
+  const $p = document.createElement('div');
+  $p.id = 'player';
+  $p.style.cssText = `position:absolute;left:${playerCol*CELL}px;top:${playerRow*CELL}px;
+    width:${CELL}px;height:${CELL}px;z-index:10;
+    display:flex;align-items:center;justify-content:center;
+    transition:left 0.08s,top 0.08s;`;
+  const img = document.createElement('img');
+  img.src = 'IMG_3774.png';
+  img.style.cssText = 'width:90%;height:90%;object-fit:contain;';
+  $p.appendChild(img);
+  $wrap.appendChild($p);
+}
+
+function updatePlayer() {
+  const $p = document.getElementById('player');
+  if ($p) {
+    $p.style.left = (playerCol * CELL) + 'px';
+    $p.style.top  = (playerRow * CELL) + 'px';
+  }
+}
+
+// ─── メッセージ ────────────────────────────────
+function showMsg(text, autoHide = false) {
+  clearTimeout(msgTimer);
+  $msg.textContent = text;
+  if (autoHide) {
+    msgTimer = setTimeout(() => { $msg.textContent = '↑↓←→ で移動　NPCに近づいて話しかけよう'; }, 2500);
+  }
+}
+
+// ─── インタラクション ──────────────────────────
+function tryInteract(dc, dr) {
+  const tc = playerCol + dc;
+  const tr = playerRow + dr;
+
+  // NPC
+  const ni = NPCS.findIndex(n => n.col === tc && n.row === tr);
+  if (ni >= 0) {
+    const n = NPCS[ni];
+    showMsg(`${n.emoji} ${n.name}「${n.lines[npcTalkIdx[ni]]}」`);
+    npcTalkIdx[ni] = (npcTalkIdx[ni] + 1) % n.lines.length;
+    return true;
+  }
+
+  // 宝箱
+  const ci = CHESTS.findIndex(ch => ch.col === tc && ch.row === tr);
+  if (ci >= 0) {
+    const ch = CHESTS[ci];
+    if (!ch.opened) {
+      ch.opened = true;
+      document.getElementById('chest' + ci).textContent = '📭';
+      showMsg('📦 宝箱を開けた！\n' + ch.msg);
+    } else {
+      showMsg('📭 もう空だ...', true);
+    }
+    return true;
+  }
+
+  // 出口
+  if (BASE_MAP[tr]?.[tc] === 5) {
+    showMsg('🚪 次のステージへ向かう…');
+    setTimeout(() => window.location.href = 'index.html', 1200);
+    return true;
+  }
+  return false;
+}
+
+function isBlocked(c, r) {
+  if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return true;
+  const v = BASE_MAP[r][c];
+  if (v === 1) return true;
+  if (NPCS.some(n => n.col === c && n.row === r)) return true;
+  if (CHESTS.some(ch => ch.col === c && ch.row === r)) return true;
+  return false;
+}
+
+function move(dc, dr) {
+  if (tryInteract(dc, dr)) return;
+  const nc = playerCol + dc, nr = playerRow + dr;
+  if (isBlocked(nc, nr)) return;
+  playerCol = nc; playerRow = nr;
+  updatePlayer();
+}
+
+// ─── 入力 ─────────────────────────────────────
+document.getElementById('bU').addEventListener('pointerdown', e => { e.preventDefault(); move(0,-1); });
+document.getElementById('bD').addEventListener('pointerdown', e => { e.preventDefault(); move(0, 1); });
+document.getElementById('bL').addEventListener('pointerdown', e => { e.preventDefault(); move(-1,0); });
+document.getElementById('bR').addEventListener('pointerdown', e => { e.preventDefault(); move( 1,0); });
+
+// リピート押し
+const dirs = { bU:[0,-1], bD:[0,1], bL:[-1,0], bR:[1,0] };
+Object.entries(dirs).forEach(([id,[dc,dr]]) => {
+  let timer = null;
+  const el = document.getElementById(id);
+  el.addEventListener('pointerdown', () => {
+    timer = setInterval(() => move(dc,dr), 160);
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(ev =>
+    el.addEventListener(ev, () => { clearInterval(timer); timer = null; })
+  );
+});
+
+document.addEventListener('keydown', e => {
+  const map = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0] };
+  const d = map[e.key];
+  if (d) { e.preventDefault(); move(...d); }
+});
+
+// ダブルタップ防止
+let _lt = 0;
+const _nd = e => { const n=Date.now(); if(n-_lt<350)e.preventDefault(); _lt=n; };
+document.addEventListener('touchstart', _nd, {passive:false});
+document.addEventListener('touchend',   _nd, {passive:false});
+
+buildMap();
+window.addEventListener('resize', buildMap);
+</script>
+</body>
+</html>

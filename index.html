@@ -1052,6 +1052,7 @@
       </select>
       <button id="debugStartBtn" style="background:#333;color:#fff;border:1px solid #555;border-radius:8px;padding:6px 14px;font-size:14px;cursor:pointer;">GO</button>
       <button id="debugEndrollBtn" style="background:#553300;color:#ffcc00;border:1px solid #aa6600;border-radius:8px;padding:6px 14px;font-size:14px;cursor:pointer;">ED</button>
+      <button id="debugRpgBtn" style="background:#003355;color:#88ddff;border:1px solid #006699;border-radius:8px;padding:6px 14px;font-size:14px;cursor:pointer;">RPG</button>
     </div>
   </div>
   <div class="lb-wrap" id="topLb"></div>
@@ -2956,6 +2957,9 @@ function runCountdown(cb) {
     initAudio(); unlockBGM();
     gameEndType = 'win'; totalScore = 99;
     showEndroll(() => showResult());
+  });
+  document.getElementById('debugRpgBtn').addEventListener('click', () => {
+    window.location.href = 'rpg.html';
   });
   document.getElementById('nextStageBtn').addEventListener('click', () => {
     initAudio();
